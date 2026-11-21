@@ -4,7 +4,7 @@ Architecture Explorer is a local, read-only workspace browser for Swift and Rust
 
 ## Quick start
 
-Use Swift 6.4.1, Python 3, and macOS 27 or later on Apple Silicon. From an Explorer checkout at tag `0.1.2`, build the paired CLI and browser helper, then point them at the repository you want to explore.
+Use Swift 6.4.1, Python 3, and macOS 27 or later on Apple Silicon. From an Explorer checkout at tag `0.1.3`, build the paired CLI and browser helper, then point them at the repository you want to explore.
 
 ```sh
 python3 Tools/package.py
@@ -31,7 +31,7 @@ flowchart TD
 | View | What you see |
 |---|---|
 | **C1 · System Context** | The selected system, people or systems around it, and recorded interactions across boundaries. |
-| **C2 · Containers** | Applications, services, and data stores declared for the selected system, with their connections. |
+| **C2 · Containers** | Applications, services, and data stores declared for the selected system, with their connections and modeled container groups. |
 | **C3 · Components** | Design groups and implementation types in the scope resolved from the selected container's entry point. |
 | **C4 · Code** | Indexed files, declarations, and relationships. Files can contain their declarations, and supported functions can open a control-flow graph. |
 
