@@ -1009,7 +1009,8 @@
     if(!navigation?.verification&&!imported&&JSON.stringify(query)===JSON.stringify(next))return;
     navigation=captureNavigation();window.history.replaceState(navigation,'');
     const index=navigation.index+(replace?0:1);
-    for(const key of navigationCache.keys())if(key>=index)navigationCache.delete(key);
+    if(replace)navigationCache.delete(index);
+    else for(const key of navigationCache.keys())if(key>=index)navigationCache.delete(key);
     const target=view?.nodes.find(node=>node.id===next.focus);
     const state={architectureExplorer:1,index,query:{...next},level:next.level||navigation.level,list:navigation.list,title:target?target.name+' · '+routeTitle(next):routeTitle(next)};
     window.history[replace?'replaceState':'pushState'](state,'',location.pathname);applyNavigation(state);load().catch(problem);
@@ -1024,8 +1025,9 @@
     next=await rpc(query.method,query);
     if(serial!==request)return;
     if(!next.nodes)throw Error('The selected API did not return a graph view.');
-    if(!saved&&navigation?.index===0&&query.method==='graph.overview'&&query.level==='context'&&!query.snapshotID&&!next.nodes.length){
-      go({method:'graph.overview',level:'module'},true);return;
+    if(!saved&&query.method==='graph.overview'&&query.level==='context'&&!next.nodes.length){
+      const {snapshotID}=query;
+      go({method:'graph.overview',level:'module',...(snapshotID?{snapshotID}:{})},true);return;
     }
     const nextHierarchy=await readHierarchy(next,query);if(serial!==request)return;
     if(external?.review&&external.review.view.snapshotID!==next.snapshotID)external.closeModel();
@@ -1162,10 +1164,7 @@
     const empty=$('empty');
     empty.replaceChildren();
     if(term&&!listedNodes.length)empty.textContent='No matching entities.';
-    else if(contextView&&!view.nodes.length){
-      empty.append(text('span','System boundary unresolved'));
-      if(!saved)empty.append(button('Browse modules',()=>go({method:'graph.overview',level:'module',...(query.snapshotID?{snapshotID:query.snapshotID}:{})})));
-    }else{empty.textContent='No recorded entities in this view.';}
+    else{empty.textContent='No recorded entities in this view.';}
     const nav=$('navigator'),list=$('node-list');nav.replaceChildren();list.replaceChildren();
     const nodes=new Map(view.nodes.map(n=>[n.id,n])),parents=model.parents,owners=fullModel.owners;
     listedNodes.forEach(node=>{const [kind,icon]=symbolKind(node),language=languageName(node),context=nodeContext(node,owners,nodes);const entry=button('',()=>selectEntry(node));entry.dataset.entityId=node.id;entry.title=[kind,language,node.name,context.detail,context.source].filter(Boolean).join(' · ');entry.append(roleMark(node),text('span',nodeTitle(node),'node-name'),text('span',kind,'node-kind'));entry.addEventListener('dblclick',()=>expand(node));nav.append(entry);

@@ -820,7 +820,7 @@ test('Map object inspection follows the source and destination of a declared int
   assert.ok(inspector.children.some(e=>e.textContent==='launcher → endpoint'));
 });
 
-test('System Context exposes typed dependency evidence and an unresolved route back to code',async t=>{
+test('System Context exposes typed dependency evidence',async t=>{
   const nodes=['payments','ledger'].map(id=>({...entity(id,'softwareSystem'),identityKey:'system:default/'+id,attributes:{'context.purpose':'Catalog system'}}));
   const edges=[{id:'uses',kind:'dependsOn',source:'payments',target:'ledger',attributes:{'context.operation':'Depends on'},evidenceIDs:['catalog-record']}];
   const page=await render(nodes,edges);
@@ -829,13 +829,44 @@ test('System Context exposes typed dependency evidence and an unresolved route b
   page.run("graph.getElementById('uses').emit('tap')");
   assert.ok(page.elements.get('inspector').children.some(child=>child.textContent==='payments/catalog-info.yaml'));
   assert.equal(page.cy.getElementById('uses').data('canvasLabel'),'Depends on');
-  const empty=await render([]);
-  t.after(()=>empty.cy.destroy());
-  assert.equal(requestedQuery(empty).level,'context');
-  const action=empty.elements.get('empty').children.find(child=>child.textContent==='Browse modules');
-  assert.ok(action);
-  action.fire('click');await settle();
-  assert.equal(requestedQuery(empty).level,'module');
+});
+
+test('unresolved System Context opens Modules on startup, home and view selection',async t=>{
+  const workspace=entity('workspace','workspace'),file=entity('File.swift','file');
+  const fetch=(url,view)=>{
+    const query=JSON.parse(new URL(url,'http://localhost').searchParams.get('params')||'{}');
+    const nodes=query.level==='context'?[]:query.level==='file'?[file]:[workspace];
+    return {ok:true,json:async()=>({...view,nodes,snapshotID:query.snapshotID||view.snapshotID})};
+  };
+  const page=await render([workspace],[],false,{fetch});
+  t.after(()=>page.cy.destroy());
+  const assertModules=()=>{
+    assert.equal(requestedQuery(page).level,'module');
+    assert.equal(page.history.state.query.level,'module');
+    assert.equal(page.cy.getElementById('workspace').length,1);
+    assert.equal(page.elements.get('empty').hidden,true);
+  };
+  assertModules();
+  assert.equal(page.history.entries.length,1);
+  const level=page.elements.get('level');
+  level.value='file';level.onchange();await settle();
+  assert.equal(page.cy.getElementById('File.swift').length,1);
+  page.elements.get('workspace-home').onclick({preventDefault(){}});await settle();
+  assertModules();
+  assert.equal(page.history.entries.length,3);
+  page.history.back();await settle();
+  assert.equal(page.cy.getElementById('File.swift').length,1);
+  page.history.forward();await settle();
+  assertModules();
+  level.value='context';level.onchange();await settle();
+  assertModules();
+
+  const query={method:'graph.overview',level:'context',snapshotID:'retained'};
+  const pinned=await render([workspace],[],false,{fetch,state:{architectureExplorer:1,index:2,query,level:'context',list:false}});
+  t.after(()=>pinned.cy.destroy());
+  assert.equal(pinned.history.state.index,2);
+  assert.equal(pinned.history.state.query.level,'module');
+  assert.equal(requestedQuery(pinned).snapshotID,'retained');
 });
 
 test('repository selection opens architecture and a service selects its composition',async t=>{
