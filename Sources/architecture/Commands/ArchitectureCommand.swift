@@ -9,7 +9,7 @@ import Foundation
 
 @main struct ArchitectureCommand {
   static let help = """
-    ArchitectureExplorer 0.1.1 — local evidence-backed architecture exploration
+    ArchitectureExplorer 0.1.2 — local evidence-backed architecture exploration
     Usage: architecture <command> [--workspace PATH] [options]
     Commands: init, index, explore, graph, search, cfg, explain, diff, status,
               capabilities, coverage, export, mcp, daemon start|status|stop, doctor, semantic, canvas
@@ -47,7 +47,7 @@ import Foundation
   }
   static func execute(_ options: CommandOptions) async throws {
     if options.command == "--version" || options.flags.contains("version") {
-      print("ArchitectureExplorer 0.1.1 / schema 1.0 / MCP 2025-11-25")
+      print("ArchitectureExplorer 0.1.2 / schema 1.0 / MCP 2025-11-25")
       return
     }
     if ["help", "--help"].contains(options.command) || options.flags.contains("help") {

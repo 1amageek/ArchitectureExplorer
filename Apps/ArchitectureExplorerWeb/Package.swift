@@ -9,7 +9,7 @@ let package = Package(
     .executable(name: "architecture-web", targets: ["architecture-web"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/1amageek/ArchitectureExplorer.git", exact: "0.1.1"),
+    .package(url: "https://github.com/1amageek/ArchitectureExplorer.git", exact: "0.1.2"),
     .package(url: "https://github.com/1amageek/swift-web.git", exact: "0.14.0"),
     .package(url: "https://github.com/1amageek/swift-html.git", exact: "0.16.1"),
     .package(url: "https://github.com/apple/swift-nio.git", exact: "2.105.0"),
