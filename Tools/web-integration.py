@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Exercise the real loopback HTTP/WebSocket host and one-use browser sessions."""
-import base64,http.client,http.cookiejar,json,os,select,signal,socket,subprocess,tempfile,urllib.request,shutil
+import argparse,base64,http.client,http.cookiejar,json,os,select,signal,socket,subprocess,tempfile,urllib.request,shutil
 from pathlib import Path
 from urllib.parse import urlsplit, quote
 ROOT=Path(__file__).resolve().parents[1];CLI=ROOT/'.build/debug/architecture';WEB=ROOT/'Apps/ArchitectureExplorerWeb/.build/debug/architecture-web'
+parser=argparse.ArgumentParser()
+parser.add_argument('--unpaired-cli',type=Path,help='Path to a standalone headless architecture executable for pairing regression checks')
+args=parser.parse_args()
 checks=[]
 invalid=subprocess.run([str(WEB),'--unknown-option'],capture_output=True,text=True,timeout=5)
 assert invalid.returncode==4 and 'unknownOption("--unknown-option")' in invalid.stderr
@@ -156,36 +159,57 @@ with tempfile.TemporaryDirectory(prefix='ae-web-') as directory:
                 try:peer_process.wait(timeout=8)
                 except subprocess.TimeoutExpired:peer_process.kill();peer_process.wait(timeout=5);raise
                 subprocess.run([str(CLI),'daemon','stop','--workspace',peer_directory],capture_output=True,timeout=8)
-        channel=socket.create_connection((parts.hostname,parts.port),timeout=5)
-        separator=chr(13)+chr(10)
-        lines=[f'GET /events HTTP/1.1',f'Host: {parts.netloc}','Upgrade: websocket','Connection: Upgrade',f'Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}','Sec-WebSocket-Version: 13',f'Origin: {origin}',f'Cookie: {cookie}']
-        channel.sendall((separator.join(lines)+separator*2).encode());buffer=b''
-        while bytes([13,10,13,10]) not in buffer:buffer+=channel.recv(8192)
-        header,buffer=buffer.split(bytes([13,10,13,10]),1);assert b'101' in header
-        stopped=subprocess.run([str(CLI),'daemon','stop','--workspace',directory],capture_output=True,text=True,timeout=10)
-        assert stopped.returncode==0,(stopped.returncode,stopped.stdout,stopped.stderr)
-        closed=False
-        def need(count):
-            global buffer
-            while len(buffer)<count:
-                data=channel.recv(8192)
-                if not data:return False
-                buffer+=data
-            return True
-        while need(2):
-            opcode=buffer[0]&15;length=buffer[1]&127;offset=2
-            if length==126:
-                if not need(4):break
-                length=int.from_bytes(buffer[2:4],'big');offset=4
-            elif length==127:
-                if not need(10):break
-                length=int.from_bytes(buffer[2:10],'big');offset=10
-            assert length<=4*1024*1024
-            if not need(offset+length):break
-            buffer=buffer[offset+length:]
-            if opcode==8:closed=True;break
-        channel.close();assert closed
+        def event_channel():
+            channel=socket.create_connection((parts.hostname,parts.port),timeout=5)
+            lines=['GET /events HTTP/1.1',f'Host: {parts.netloc}','Upgrade: websocket','Connection: Upgrade',f'Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}','Sec-WebSocket-Version: 13',f'Origin: {origin}',f'Cookie: {cookie}']
+            channel.sendall(('\r\n'.join(lines)+'\r\n\r\n').encode())
+            return channel
+
+        def frames(channel):
+            with channel.makefile('rb') as stream:
+                assert b'101' in stream.readline()
+                while line:=stream.readline():
+                    if line==b'\r\n':break
+                else:raise AssertionError('WebSocket response ended before the frame stream')
+                while header:=stream.read(2):
+                    assert len(header)==2
+                    opcode=header[0]&15
+                    length=header[1]&127
+                    if length in (126,127):
+                        length=int.from_bytes(stream.read(2 if length==126 else 8),'big')
+                    assert length<=4*1024*1024
+                    yield opcode,stream.read(length)
+                    if opcode==8:return
+
+        with event_channel() as channel:
+            events=frames(channel)
+            opcode,body=next(events)
+            assert opcode==1 and json.loads(body)['type'] in ('viewInvalidated','analysisStatusChanged')
+            subprocess.run([str(CLI),'daemon','stop','--workspace',directory],capture_output=True,text=True,check=True,timeout=10)
+            assert any(opcode==8 for opcode,_ in events)
         checks.append('backend failure closes an authenticated stream without a self-await deadlock')
+
+        if args.unpaired_cli:
+            unpaired=str(args.unpaired_cli.resolve())
+            subprocess.run([unpaired,'daemon','start','--workspace',directory],capture_output=True,check=True,timeout=30)
+            try:
+                denied=subprocess.run([str(WEB),'--workspace',directory,'--no-open'],capture_output=True,text=True,timeout=10)
+                assert denied.returncode!=0 and not denied.stdout and 'WEB_HOST_PAIRING_MISMATCH' in denied.stderr,denied
+                with event_channel() as channel:
+                    events=frames(channel)
+                    opcode,body=next(events)
+                    failure=json.loads(body)
+                    assert opcode==1 and failure['type']=='liveUnavailable' and failure['code']=='WEB_HOST_PAIRING_MISMATCH',failure
+                    assert next(events)[0]==8
+                checks.append('an unpaired daemon rejects startup and emits a terminal event to existing browser sessions')
+            finally:
+                subprocess.run([unpaired,'daemon','stop','--workspace',directory],capture_output=True,check=True,timeout=10)
+            subprocess.run([str(CLI),'daemon','start','--workspace',directory],capture_output=True,check=True,timeout=30)
+            with event_channel() as channel:
+                events=frames(channel)
+                opcode,body=next(events)
+                assert opcode==1 and json.loads(body)['type'] in ('viewInvalidated','analysisStatusChanged')
+            checks.append('same paired build restores index delivery to an existing authenticated browser session')
 
     finally:
         process.send_signal(signal.SIGTERM)

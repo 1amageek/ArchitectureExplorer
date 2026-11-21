@@ -19,6 +19,8 @@ Public entry -> Hosting owner -> result or explicit failure
 ## Contracts and Invariants
 Session state has one actor owner; rendered text is plain data; source is obtained only through Client; shutdown awaits owned tasks; invalidation never resets user transform unconditionally.
 
+Before serving a live workspace or issuing a browser launch URL, the Web host must complete an authorized `events.poll` using its own OS peer identity. A rejected peer fails startup with guidance to restart the workspace with the paired build. If a running daemon later rejects the Web host, the subscription sends a terminal `liveUnavailable` event before closing. Transient transport failures close the stream so an authenticated browser can reconnect. Repository-map startup remains independent of the daemon.
+
 ## Verification and Change Impact
 The real HTTP/WebSocket integration tests and browser gesture/update probes exercise the owning behavior. Native-only target; no conditional synchronization weakening.
 

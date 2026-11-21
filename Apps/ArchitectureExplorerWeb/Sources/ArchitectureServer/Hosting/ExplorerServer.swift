@@ -17,7 +17,7 @@ public enum ExplorerServer {
     let authority = SessionAuthority(port: port)
     let client = try ArchitectureClient(workspace: workspace)
     let collection = try repositoryMap.map { try RepositoryMap(root: client.paths.root, manifest: $0) }
-    if collection == nil { _ = try await client.call("daemon.hello") }
+    if collection == nil { _ = try await liveEvent(client, after: .object([:])) }
     let streams = SubscriptionStreams()
     var hooks = SwiftWebDevelopmentHooks.disabled
     hooks.registerRoutes = { routes in
@@ -32,7 +32,7 @@ public enum ExplorerServer {
             var previous: JSONValue = .object([:])
             while !Task.isCancelled {
               do {
-                let event = try await client.call("events.poll", parameters: previous)
+                let event = try await liveEvent(client, after: previous)
                 if event["type"].string != "unchanged" || event["extensionChanged"].bool == true {
                   let data = try CanonicalJSON.encode(event)
                   try await channel.send(String(decoding: data, as: UTF8.self))
@@ -40,6 +40,18 @@ public enum ExplorerServer {
                 previous = event
                 try await Task.sleep(for: .milliseconds(250))
               } catch is CancellationError { return } catch {
+                if let error = error as? ArchitectureError, error.code == "WEB_HOST_PAIRING_MISMATCH" {
+                  do {
+                    let event = JSONValue.object([
+                      "type": .string("liveUnavailable"), "code": .string(error.code),
+                      "message": .string(error.message),
+                    ])
+                    let data = try CanonicalJSON.encode(event)
+                    try await channel.send(String(decoding: data, as: UTF8.self))
+                  } catch {
+                    FileHandle.standardError.write(Data("WebSocket diagnostic delivery failed: \(error)\n".utf8))
+                  }
+                }
                 do { try await channel.close() } catch {
                   FileHandle.standardError.write(Data("WebSocket close failed: \(error)\n".utf8))
                 }
@@ -106,6 +118,16 @@ public enum ExplorerServer {
       await streams.shutdown()
       await SwiftWebDevelopmentSupport.shared.reset()
       throw error
+    }
+  }
+  private static func liveEvent(_ client: ArchitectureClient, after previous: JSONValue) async throws -> JSONValue {
+    do {
+      return try await client.call("events.poll", parameters: previous)
+    } catch let error as ArchitectureError where ["SESSION_EXPIRED", "AUTHENTICATION_REQUIRED", "POLICY_DENIED"].contains(error.code) {
+      throw ArchitectureError(
+        "WEB_HOST_PAIRING_MISMATCH",
+        "Explorer cannot connect because the Web host and workspace daemon are from different builds. Restart Explorer and the daemon using the same paired build.",
+        exitCode: 5)
     }
   }
   private static func availablePort() throws -> Int {

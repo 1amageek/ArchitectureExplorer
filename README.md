@@ -7,13 +7,12 @@ Architecture Explorer is a local, read-only workspace browser for Swift and Rust
 Use Swift 6.4.1, Python 3, and macOS 27 or later on Apple Silicon. From an Explorer checkout at tag `0.1.0`, build the paired CLI and browser helper, then point them at the repository you want to explore.
 
 ```sh
-python3 Tools/build.py
-.build/debug/architecture index --workspace /path/to/project
-.build/debug/architecture explore --workspace /path/to/project --watch \
-  --web-helper Apps/ArchitectureExplorerWeb/.build/debug/architecture-web
+python3 Tools/package.py
+Dist/ArchitectureExplorer/bin/architecture index --workspace /path/to/project
+Dist/ArchitectureExplorer/bin/architecture explore --workspace /path/to/project --watch
 ```
 
-Keep the `explore` command running while using the browser. Add `--no-open` to receive a one-use loopback URL without opening a browser automatically. After rebuilding, restart the workspace daemon before opening the new helper so it recognizes the updated executable. Build only the CLI and libraries with `python3 Tools/build.py --headless`. The browser serves its bundled assets locally. [CLI reference](Documentation/CLI.md) · [Local sessions and trust](Documentation/SECURITY.md)
+Keep the `explore` command running while using the browser. Add `--no-open` to receive a one-use loopback URL without opening a browser automatically. The local package keeps the paired executables together outside SwiftPM's build and test output. Before replacing it, close Explorer and run `Dist/ArchitectureExplorer/bin/architecture daemon stop --workspace /path/to/project` using the running daemon's build. Then rebuild and reopen Explorer. Build the standalone CLI and libraries with `python3 Tools/build.py --headless`. [CLI reference](Documentation/CLI.md) · [Local sessions and trust](Documentation/SECURITY.md)
 
 ## Explore a workspace
 

@@ -21,7 +21,9 @@
     "two loopback helpers remain authenticated in one browser cookie jar",
     "both helpers upgrade WebSockets with their own session cookies",
     "another helper session cookie cannot authenticate a peer",
-    "backend failure closes an authenticated stream without a self-await deadlock"
+    "backend failure closes an authenticated stream without a self-await deadlock",
+    "an unpaired daemon rejects startup and emits a terminal event to existing browser sessions",
+    "same paired build restores index delivery to an existing authenticated browser session"
   ],
-  "passed": 22
+  "passed": 24
 }

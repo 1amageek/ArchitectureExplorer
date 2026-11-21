@@ -86,7 +86,9 @@ test('Terminal retains bounded live events while collapsed and reopens without a
   const toggle=page.elements.get('terminal-toggle'),output=page.elements.get('terminal-output');
   const count=page.networkRequests.length,socket=page.sockets[0];
   assert.equal(output.hidden,true);assert.equal(toggle['aria-expanded'],'false');
-  socket.onopen();
+  socket.onopen?.();
+  assert.doesNotMatch(terminalMessages(page),/Connected to the live index/);
+  toggle.onclick();
   const update=i=>socket.onmessage({data:JSON.stringify({type:'analysisStatusChanged',progress:{completedSources:i,totalSources:100,runningWorkers:2}})});
   update(30);update(30);
   assert.equal(output.children.length,0);
@@ -98,6 +100,33 @@ test('Terminal retains bounded live events while collapsed and reopens without a
   assert.equal(output.children.length,0);
   assert.doesNotMatch(terminalMessages(page),/Indexing 30/);assert.equal(output.children.length,250);
   assert.equal(page.networkRequests.length,count);
+});
+test('live index reports a pairing denial once and preserves the loaded graph',async t=>{
+  const page=await render([entity('Service','module')]);t.after(()=>page.cy.destroy());
+  const socket=page.sockets[0],count=page.networkRequests.length;
+  page.run('let retries=[]; setTimeout=callback=>retries.push(callback)');
+  const denial={data:JSON.stringify({type:'liveUnavailable',code:'WEB_HOST_PAIRING_MISMATCH',message:'Restart Explorer and the daemon using the same paired build.'})};
+  socket.onmessage(denial);socket.onmessage(denial);socket.onclose();
+  assert.equal(page.elements.get('live').textContent,'Live index unavailable');
+  assert.equal(page.cy.getElementById('Service').length,1);
+  assert.equal(page.run('retries.length'),0);
+  assert.equal(page.networkRequests.length,count);
+  const history=terminalMessages(page);
+  assert.equal((history.match(/using the same paired build/g)||[]).length,1);
+  assert.doesNotMatch(history,/Connected to the live index|Reconnecting/);
+});
+test('a transient live index interruption reconnects without repeating graph reads or warnings',async t=>{
+  const page=await render([entity('Service','module')]);t.after(()=>page.cy.destroy());
+  const count=page.networkRequests.length;
+  page.run('let retries=[]; setTimeout=callback=>retries.push(callback)');
+  page.sockets[0].onclose();page.run('retries.shift()()');
+  page.sockets[1].onclose();page.run('retries.shift()()');
+  assert.equal(page.networkRequests.length,count);
+  page.sockets[2].onmessage({data:JSON.stringify({type:'viewInvalidated',snapshotID:'snapshot'})});
+  assert.equal(page.elements.get('live').textContent,'Live index');
+  const history=terminalMessages(page);
+  assert.equal((history.match(/Reconnecting/g)||[]).length,1);
+  assert.equal((history.match(/Connected to the live index/g)||[]).length,1);
 });
 test('recorded roles stay distinct; unknown refinements use the coarse category',async t=>{
   const roles=['class','struct','protocol','trait','function','method','module'];

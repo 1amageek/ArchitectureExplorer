@@ -7,7 +7,7 @@
   let repositoryPage;
   let sourceView, allFileDeclarations=false;
   let c4Map, contextOverview;
-  let view, cy, selected, selectedFact, query = {method:'graph.overview',level:'context'}, navigation, layoutReadyQuery, searchTimer, inspection = 0, request = 0, layoutGeneration = 0, lastLayoutKey, visibleLayout, edgeHoverNode, worker, streamEpoch, socket;
+  let view, cy, selected, selectedFact, query = {method:'graph.overview',level:'context'}, navigation, layoutReadyQuery, searchTimer, inspection = 0, request = 0, layoutGeneration = 0, lastLayoutKey, visibleLayout, edgeHoverNode, worker, streamEpoch;
   const text = (tag,value,cls) => {const e=document.createElement(tag);e.textContent=value;if(cls)e.className=cls;return e;};
   const button = (label,action,cls) => {const e=text('button',label,cls);e.addEventListener('click',action);return e;};
   function createTerminal(){
@@ -1619,15 +1619,24 @@
   $('export').onclick=async()=>{try{if(canvas?.active){await downloadCanvas('json');return;}const data=saved?JSON.stringify(view,null,2):(await rpc('graph.export',{query:{...query,snapshotID:view.snapshotID},format:'json'})).text;const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='architecture-view.json';link.click();URL.revokeObjectURL(url);}catch(error){problem(error);}};
   async function downloadCanvas(format){const result=await rpc('canvas.export',{viewSessionID:canvas.session.viewSessionID,format});const url=URL.createObjectURL(new Blob([result.text],{type:format==='svg'?'image/svg+xml':'application/json'}));const link=document.createElement('a');link.href=url;link.download=canvas.session.document.title.replace(/\.[^.]+$/,'')+'.'+format;link.click();URL.revokeObjectURL(url);}
   if($('canvas-export-svg'))$('canvas-export-svg').onclick=()=>downloadCanvas('svg').catch(problem);
+  let reconnecting=false;
   function connect(){
-    socket=new WebSocket('ws://'+location.host+'/events');
-    let lastProgress;
-    socket.onopen=()=>{
-      $('live').textContent='Live index';$('live').classList.remove('offline');
-      terminal.write('info','Connected to the live index.');
-    };
+    const socket=new WebSocket('ws://'+location.host+'/events');
+    let lastProgress, ready=false, rejected=false;
     socket.onmessage=event=>{
       const value=JSON.parse(event.data);
+      if(rejected)return;
+      if(value.type==='liveUnavailable'){
+        rejected=true;
+        $('live').textContent='Live index unavailable';$('live').classList.add('offline');
+        terminal.write('error',value.message);
+        return;
+      }
+      if(!ready){
+        ready=true;reconnecting=false;
+        $('live').textContent='Live index';$('live').classList.remove('offline');
+        terminal.write('info','Connected to the live index.');
+      }
       if(value.extensionChanged)external?.refresh().catch(problem);
       streamEpoch=value.streamEpoch;
       if(value.type==='analysisStatusChanged'){
@@ -1644,9 +1653,11 @@
       }
     };
     socket.onclose=()=>{
+      if(rejected)return;
       $('live').textContent='Disconnected · may be stale';$('live').classList.add('offline');
-      terminal.write('warn','Live index disconnected. Reconnecting…');
-      setTimeout(()=>{connect();if(!canvas?.active&&!query.snapshotID)load(true).catch(problem);},1500);
+      if(!reconnecting)terminal.write('warn','Live index disconnected. Reconnecting…');
+      reconnecting=true;
+      setTimeout(connect,1500);
     };
   }
   function repositoryRoute(){
