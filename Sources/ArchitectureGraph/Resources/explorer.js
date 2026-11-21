@@ -495,11 +495,16 @@
   function fitCanvas(padding=75,elements){cy.fit(elements,padding);if(cy.zoom()>1){cy.zoom(1);cy.center(elements);}}
   function openCanvas(){
     if(!cy.nodes().length)return;
-    if(query.method==='graph.overview'&&query.level==='component'&&query.focus&&view.extensions?.['implementation.scope']){
+    const component=query.method==='graph.overview'&&query.level==='component'&&view.extensions?.['implementation.scope'];
+    const neighborhood=query.method==='graph.neighbors'||query.method==='graph.impact';
+    if(query.focus&&(component||neighborhood)){
       const entry=cy.getElementById(query.focus);
-      const references=entry.outgoers('edge[relation = "candidate-types"]');
+      const selector='edge[relation = "candidate-types"]';
+      const incoming=query.method==='graph.impact'||query.direction==='incoming';
+      const references=query.method==='graph.neighbors'&&query.direction==='both'?entry.connectedEdges(selector):
+        incoming?entry.incomers(selector):entry.outgoers(selector);
       if(references.length){
-        fitCanvas(40,entry.union(references).union(references.targets()));
+        fitCanvas(40,references.union(references.connectedNodes()));
         return;
       }
     }
@@ -552,7 +557,8 @@
       [['Open verification report','proofDependencies',()=>openMapVerification(entity)]]:[];
     if(entity.kind==='softwareSystem')return [['Open containers','expand',()=>expand(entity)],['Focus system','focus',()=>focusSystem(entity)],...verification];
     if(entity.attributes?.['context.owner'])return [entity.attributes['context.entryID']?['Open components','expand',()=>expand(entity)]:['Inspect container','focus',()=>inspect(entity)],...verification];
-    const pinned=query.snapshotID?{snapshotID:query.snapshotID}:{};
+    const snapshotID=view?.snapshotID;
+    const pinned=snapshotID?{snapshotID}:{};
     const commands=[
       ['Expand','expand',()=>expand(entity)],
       ['Neighbors','neighbors',()=>go({method:'graph.neighbors',focus:entity.id,depth:2,direction:$('direction').value,...pinned})],

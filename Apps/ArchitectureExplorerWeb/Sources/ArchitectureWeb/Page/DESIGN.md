@@ -168,8 +168,9 @@ An open node menu follows its anchor during layout and camera updates. Verify mo
 
 C4 rendering follows the [Map display contract](../../../../../Documentation/C4-CONTEXT-SPEC.md#map).
 Opening a container's source graph frames the entry declaration and its direct
-reference edges on the first layout. Browser history restores the saved camera
-for revisited views.
+reference edges on the first layout. Neighbors and Impact use the snapshot
+shown in the originating view and frame the direct references of their focus.
+Browser history restores the saved camera for revisited views.
 The page mounts one diagram surface for a C4 query, owns its camera, and disposes
 its listeners and observer on navigation. Three.js projects local geometry on
 the shared grid. SVG hit targets carry original entity and relation IDs to the

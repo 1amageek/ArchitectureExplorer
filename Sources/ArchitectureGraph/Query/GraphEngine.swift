@@ -46,10 +46,12 @@ public struct GraphEngine: GraphQuerying {
     let deadline = ContinuousClock.now.advanced(by: .milliseconds(200))
     var workTruncated = false
     let componentOverview = query.method == "graph.overview" && query.level == "component"
-    let includeTypeReferences = (fileOutline || componentOverview)
-      && (query.kinds.isEmpty || query.kinds.contains("candidateTypeReference"))
+    let referenceTraversal = ["graph.neighbors", "graph.impact"].contains(query.method)
+    let referenceFilter = query.kinds.isEmpty || query.kinds.contains("candidateTypeReference")
+    let includeTypeReferences = (fileOutline || componentOverview) && referenceFilter
     var prioritized = Set<String>()
     var entryReferences: [Fact] = []
+    var traversedReferences: [String: Fact] = [:]
     var typeReferences: TypeReferenceProjection?
     func selectOutline(_ roots: [String], includeRoots: Bool) {
       let excluded: Set<String> = ["callSite", "basicBlock", "unresolvedSymbol", "externalSymbol"]
@@ -233,20 +235,51 @@ public struct GraphEngine: GraphQuerying {
       selected.insert(id)
       var frontier = [id]
       var adjacency: [String: [String]] = [:]
+      let impact = query.method == "graph.impact"
+      let incoming = impact || query.direction != "outgoing"
+      let outgoing = !impact && query.direction != "incoming"
       let edges =
         query.method == "graph.cfg"
         ? eligible.filter { $0.producer == "cfg.tree-sitter" && $0.scope == id } : eligible
       for edge in edges {
-        let reverse = query.method == "graph.impact" || query.direction == "incoming"
-        if !reverse { adjacency[edge.source, default: []].append(edge.target) }
-        if reverse || query.direction == "both" {
-          adjacency[edge.target, default: []].append(edge.source)
-        }
+        if outgoing { adjacency[edge.source, default: []].append(edge.target) }
+        if incoming { adjacency[edge.target, default: []].append(edge.source) }
+      }
+      if referenceTraversal && referenceFilter && query.depth > 0 {
+        typeReferences = TypeReferenceProjection(snapshot: snapshot, entities: entities,
+          indexIncoming: incoming, deadline: deadline)
+        workTruncated = typeReferences == nil
       }
       for _ in 0..<query.depth {
         var next: [String] = []
         for node in frontier {
-          for neighbor in adjacency[node, default: []].sorted() {
+          var neighbors = Set(adjacency[node, default: []])
+          if let typeReferences, let declaration = entities[node] {
+            var references: [Fact] = []
+            if outgoing {
+              let result = typeReferences.edges(visible: nil, nodes: [declaration], entities: entities,
+                parents: outlineParents, budget: query.edgeLimit, deadline: deadline)
+              references.append(contentsOf: result.facts)
+              workTruncated = workTruncated || result.truncated
+            }
+            if incoming {
+              let result = typeReferences.incoming(to: declaration, entities: entities,
+                parents: outlineParents, budget: query.edgeLimit, deadline: deadline)
+              references.append(contentsOf: result.facts)
+              workTruncated = workTruncated || result.truncated
+            }
+            for edge in references {
+              guard traversedReferences[edge.id] != nil || traversedReferences.count < query.edgeLimit else {
+                workTruncated = true
+                break
+              }
+              traversedReferences[edge.id] = edge
+              let neighbor = edge.source == node ? edge.target : edge.source
+              neighbors.insert(neighbor)
+              if node == id { prioritized.formUnion([id, neighbor]) }
+            }
+          }
+          for neighbor in neighbors.sorted() {
             if selected.insert(neighbor).inserted { next.append(neighbor) }
             if selected.count > 20000 || ContinuousClock.now >= deadline {
               workTruncated = true
@@ -331,6 +364,7 @@ public struct GraphEngine: GraphQuerying {
     }
     let nodes = ordered.filter { visible.contains($0.id) }
     var projected = eligible.filter { visible.contains($0.source) && visible.contains($0.target) }
+    projected.append(contentsOf: traversedReferences.values.filter { visible.contains($0.source) && visible.contains($0.target) })
     if contextView, let subject = contextSubject {
       projected.removeAll { $0.source != subject && $0.target != subject }
     }
@@ -393,8 +427,11 @@ public struct GraphEngine: GraphQuerying {
     }
     projected.sort {
       if fileOutline && ($0.kind == "contains") != ($1.kind == "contains") { return $0.kind == "contains" }
-      if componentOverview, let entry = query.focus, ($0.source == entry) != ($1.source == entry) {
-        return $0.source == entry
+      if componentOverview || referenceTraversal, let entry = query.focus {
+        let first = $0.kind == "candidateTypeReference" && ($0.source == entry || $0.target == entry)
+        let second = $1.kind == "candidateTypeReference" && ($1.source == entry || $1.target == entry)
+        if first != second { return first }
+        if componentOverview && ($0.source == entry) != ($1.source == entry) { return $0.source == entry }
       }
       return $0.id < $1.id
     }

@@ -340,6 +340,20 @@ test('the focused source canvas opens with all direct references in frame',async
     'The entry and every direct dependency fit the initial viewport');
 });
 const requestedQuery=page=>JSON.parse(new URL('http://localhost'+page.networkRequests.filter(url=>url.startsWith('/api?')&&JSON.parse(new URL('http://localhost'+url).searchParams.get('params')).method).at(-1)).searchParams.get('params'));
+test('outgoing and incoming navigation pin the displayed live snapshot',async t=>{
+  for(const [label,method] of [['Neighbors','graph.neighbors'],['Impact','graph.impact']]){
+    const page=await render([entity('Entry','type')]);t.after(()=>page.cy.destroy());
+    page.worker.onmessage({data:{...page.worker.message,nodes:[{id:'Entry',x:0,y:0}]}});
+    assert.equal(requestedQuery(page).snapshotID,undefined);
+    page.cy.getElementById('Entry').emit('tap');
+    await settle();
+    const actions=page.elements.get('inspector').children.find(node=>node.className==='action-row');
+    actions.children.find(action=>action.textContent===label).fire('click');
+    await settle();
+    assert.deepEqual(requestedQuery(page),{method,focus:'Entry',depth:2,
+      ...(label==='Neighbors'?{direction:'outgoing'}:{}),snapshotID:'snapshot'});
+  }
+});
 test('the live footer shows the full workspace path independently of graph navigation',async t=>{
   const workspaceRoot='/work/Projects & <Examples>/App';
   const page=await render([entity('workspace','workspace')],[],false,{fetch:(raw,view)=>({ok:true,json:async()=>

@@ -118,14 +118,37 @@ struct BehaviorTests {
         """)
     }
     try manifest(dependencies: #"["Core", .target(name: "Unimported")]"#)
-    try write("Sources/App/Entry.swift", """
-      import Core
-      import Undeclared
+    let imports = "import Core\nimport Undeclared\n"
+    let declaration = """
       struct Entry {
         var store = Store(repository: TaskRepository())
         var view = Workspace()
         var unrelated = ImportedWithoutDependency()
         var hidden = DeclaredWithoutImport()
+      }
+      """
+    let source = imports + declaration
+    try write("Sources/App/Entry.swift", source)
+    let digest = CanonicalJSON.digest(Data(source.utf8))
+    try write("ARCHITECTURE.dsl", """
+      workspace "Example" {
+          !impliedRelationships false
+          model {
+              group "Example" {
+                  system = softwareSystem "Example" {
+                      // Entry: type \(imports.utf8.count)..<\(source.utf8.count) sha256=\(digest) Sources/App/Entry.swift
+                      app = container "Example app"
+                  }
+              }
+          }
+          views {
+              systemContext system Context {
+                  include *
+              }
+              container system Containers {
+                  include *
+              }
+          }
       }
       """)
     try write("Sources/App/Workspace.swift", "struct Workspace {}\nstruct Aardvark {}\nstruct Another {}")
@@ -136,21 +159,41 @@ struct BehaviorTests {
     let store = try SQLiteGraphStore(path: root.appendingPathComponent("index.db").path, workspaceID: paths.workspaceID)
     let indexer = WorkspaceIndexer(paths: paths, store: store)
     let snapshot = try await indexer.reconcile()
-    let entry = try #require(snapshot.entities.first { $0.name == "Entry" })
-    let query = GraphQuery(method: "graph.overview", focus: entry.id, limit: 4, level: "component")
     let engine = GraphEngine()
+    let system = try #require(snapshot.entities.first { $0.kind == "softwareSystem" })
+    let containers = try engine.view(GraphQuery(method: "graph.overview", focus: system.id, level: "container"), snapshot: snapshot)
+    let entryID = try #require(containers.nodes.first { $0.name == "Example app" }?.attributes["context.entryID"]?.string)
+    let query = GraphQuery(method: "graph.overview", focus: entryID, limit: 4, level: "component")
     let view = try engine.view(query, snapshot: snapshot)
     let expected: Set<String> = ["Store", "TaskRepository", "Workspace"]
     #expect(Set(view.nodes.map(\.name)) == expected.union(["Entry"]))
     #expect(view.extensions?["implementation.scope"]?.string == "Module · App")
     #expect(view.truncated && view.nextCursor != nil)
     let names = Dictionary(uniqueKeysWithValues: view.nodes.map { ($0.id, $0.name) })
-    let references = view.edges.filter { $0.source == entry.id && $0.kind == "candidateTypeReference" }
+    let references = view.edges.filter { $0.source == entryID && $0.kind == "candidateTypeReference" }
     #expect(Set(references.compactMap { names[$0.target] }) == expected)
     let crossModule = try #require(references.first { names[$0.target] == "Store" })
     #expect(crossModule.attributes["reference.site"]?["line"].int == 4)
     #expect(crossModule.attributes["reference.scope"]?.string == "Core")
     #expect(view.evidence.contains { crossModule.evidenceIDs.contains($0.id) && $0.anchor?.path == "Package.swift" })
+    let neighbors = GraphQuery(method: "graph.neighbors", focus: entryID, kinds: ["candidateTypeReference"], depth: 1, limit: 4)
+    let impact = GraphQuery(method: "graph.impact", focus: crossModule.target, kinds: ["candidateTypeReference"], depth: 1)
+    let outgoing = try engine.view(neighbors, snapshot: snapshot)
+    #expect(outgoing.edges == references)
+    let incoming = try engine.view(impact, snapshot: snapshot)
+    #expect(incoming.edges == [crossModule])
+    #expect(incoming.snapshotID == outgoing.snapshotID && outgoing.snapshotID == containers.snapshotID)
+    let expectedEvidence = view.evidence.filter { crossModule.evidenceIDs.contains($0.id) }
+    #expect(!expectedEvidence.isEmpty)
+    #expect(incoming.evidence.filter { crossModule.evidenceIDs.contains($0.id) } == expectedEvidence)
+    #expect(outgoing.evidence.filter { crossModule.evidenceIDs.contains($0.id) } == expectedEvidence)
+    let reverseNeighbors = GraphQuery(method: "graph.neighbors", focus: crossModule.target,
+      kinds: ["candidateTypeReference"], direction: "incoming", depth: 1)
+    #expect(try engine.view(reverseNeighbors, snapshot: snapshot).edges == [crossModule])
+    let constrained = GraphQuery(method: "graph.neighbors", focus: entryID,
+      kinds: ["candidateTypeReference"], depth: 1, limit: 1, edgeLimit: 1)
+    let bounded = try engine.view(constrained, snapshot: snapshot)
+    #expect(bounded.truncated && bounded.nodes.map(\.id) == [entryID] && bounded.edges.isEmpty)
     let modules = try engine.view(GraphQuery(method: "graph.overview", level: "module"), snapshot: snapshot)
     let app = try #require(modules.nodes.first { $0.name == "App" })
     let core = try #require(modules.nodes.first { $0.name == "Core" })
@@ -159,9 +202,12 @@ struct BehaviorTests {
     try manifest(dependencies: #"["Unimported"]"#)
     let changed = try await indexer.reconcile()
     let after = try engine.view(query, snapshot: changed)
-    #expect(after.edges.filter { $0.source == entry.id && $0.kind == "candidateTypeReference" }.map { $0.attributes["reference.scope"]?.string } == ["App"])
+    #expect(after.edges.filter { $0.source == entryID && $0.kind == "candidateTypeReference" }.map { $0.attributes["reference.scope"]?.string } == ["App"])
+    #expect(try engine.view(impact, snapshot: changed).edges.isEmpty)
+    #expect(try engine.view(neighbors, snapshot: changed).edges.map(\.target) == after.edges.map(\.target))
     let pinned = try await indexer.snapshot(snapshot.id)
     #expect(try engine.view(query, snapshot: pinned).edges == view.edges)
+    #expect(try engine.view(impact, snapshot: pinned).edges == incoming.edges)
   }
   @Test(.timeLimit(.minutes(1))) func declarationRolesDistinguishTypesAndCallables() throws {
     let swift = try SkeletonFrontend().analyze(input("""

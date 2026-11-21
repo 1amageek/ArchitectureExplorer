@@ -25,6 +25,7 @@ struct TypeReferenceProjection {
   private let dependencies: [String: [Fact]]
   private let modules: [String: Entity]
   private let declarations: [Scope: [String: [Entity]]]
+  private let sourceSites: [String: [Entity]]
 
   private static func scope(of type: Entity, path: String, owners: [String: ModuleOwner]) -> Scope {
     if type.language == "swift" {
@@ -38,7 +39,7 @@ struct TypeReferenceProjection {
     return Scope(language: type.language, lexicalPath: path, module: nil)
   }
 
-  init?(snapshot: Snapshot, entities: [String: Entity], deadline: ContinuousClock.Instant) {
+  init?(snapshot: Snapshot, entities: [String: Entity], indexIncoming: Bool = false, deadline: ContinuousClock.Instant) {
     let syntax = "syntax.tree-sitter+skeleton"
     let topology: Set<String> = ["project.swiftpm.literal", "project.metadata"]
     var evidence: [String: Evidence] = [:], records: [String: Evidence] = [:]
@@ -85,6 +86,17 @@ struct TypeReferenceProjection {
       let scope = Self.scope(of: type, path: path, owners: owners)
       declarations[scope, default: [:]][type.name, default: []].append(type)
     }
+    var sourceSites: [String: [Entity]] = [:]
+    if indexIncoming {
+      for entity in snapshot.entities {
+        guard ContinuousClock.now < deadline else { return nil }
+        guard let anchor = entity.anchor, records[anchor.path]?.inputDigest == anchor.digest else { continue }
+        for site in entity.attributes["syntax.typeSites"]?.array ?? [] {
+          guard ContinuousClock.now < deadline else { return nil }
+          if let spelling = site["name"].string { sourceSites[spelling, default: []].append(entity) }
+        }
+      }
+    }
     guard ContinuousClock.now < deadline else { return nil }
     self.snapshotID = snapshot.id
     self.records = records
@@ -93,10 +105,19 @@ struct TypeReferenceProjection {
     self.dependencies = dependencies
     self.modules = entities
     self.declarations = declarations
+    self.sourceSites = sourceSites
+  }
+
+  func incoming(to target: Entity, entities: [String: Entity], parents: [String: [Fact]],
+    budget: Int, deadline: ContinuousClock.Instant) -> (facts: [Fact], truncated: Bool) {
+    guard ["type", "actor", "interface"].contains(target.kind) else { return ([], false) }
+    return edges(visible: [target.id], nodes: sourceSites[target.name, default: []], entities: entities,
+      parents: parents, budget: budget, deadline: deadline, matching: target.name)
   }
 
   func edges(visible: Set<String>?, nodes: [Entity], entities: [String: Entity],
-    parents: [String: [Fact]], budget: Int, deadline: ContinuousClock.Instant) -> (facts: [Fact], truncated: Bool) {
+    parents: [String: [Fact]], budget: Int, deadline: ContinuousClock.Instant,
+    matching: String? = nil) -> (facts: [Fact], truncated: Bool) {
     var facts: [Fact] = []
     for owner in nodes {
       guard ContinuousClock.now < deadline else { return (facts, true) }
@@ -116,7 +137,7 @@ struct TypeReferenceProjection {
       }
       for site in owner.attributes["syntax.typeSites"]?.array ?? [] {
         guard ContinuousClock.now < deadline else { return (facts, true) }
-        guard let spelling = site["name"].string else { continue }
+        guard let spelling = site["name"].string, matching == nil || matching == spelling else { continue }
         var match: (Scope, Entity)?
         for candidate in scopes {
           guard ContinuousClock.now < deadline else { return (facts, true) }
