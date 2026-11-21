@@ -555,9 +555,18 @@
   }
   let propertySession;
   const propertyRequests=new Map();
-  async function enablePropertyAction(){
-    if(typeof document.modelContext?.registerTool!=='function'||typeof document.oai?.annotation?.request!=='function')return;
+  async function loadHostContext(){
     const session=await rpc('host.context');
+    if(typeof session.workspaceRoot==='string'&&session.workspaceRoot){
+      const path=$('workspace-root-path');
+      path.textContent=session.workspaceRoot;
+      path.title=session.workspaceRoot;
+      path.hidden=false;
+    }
+    await enablePropertyAction(session);
+  }
+  async function enablePropertyAction(session){
+    if(typeof document.modelContext?.registerTool!=='function'||typeof document.oai?.annotation?.request!=='function')return;
     if(!session.propertyActions)return;
     async function connect(threadID){
       const response=await fetch('/properties',{method:'POST',credentials:'same-origin',
@@ -1801,7 +1810,7 @@
   async function start(){setupPaneResizing();if(saved){setupNavigation();view=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(window.ARCHITECTURE_SAVED),c=>c.charCodeAt(0))));logGraph(view,'Opened saved snapshot');$('live').textContent='Saved · not live';$('live').classList.add('offline');external?.refresh().catch(problem);render();return;}
     const token=new URLSearchParams(location.hash.slice(1)).get('token');if(token){historyReplace();const response=await fetch('/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});if(!response.ok)throw Error('The launch token expired or was already used. Restart explore to open a new session.');}
     if(repositoryMode){await startRepository();return;}
-    await enablePropertyAction().catch(problem);
+    await loadHostContext().catch(problem);
     setupNavigation();worker=new Worker('/assets/layout-worker.js');worker.onerror=event=>problem(Error('Layout worker failed: '+event.message));
     if(navigation.verification)restoreVerification(navigation.verification).catch(problem);
     else if(navigation.canvasSessionID||new URLSearchParams(location.hash.slice(1)).get('canvas'))await canvas.openSession(navigation.canvasSessionID||new URLSearchParams(location.hash.slice(1)).get('canvas'),false).catch(problem);

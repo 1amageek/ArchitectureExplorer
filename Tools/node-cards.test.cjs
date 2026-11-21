@@ -281,7 +281,7 @@ test('responsive panel limits keep widths bounded and work in saved and live vie
     const observer=page.observers.find(item=>item.target===workspace);assert.ok(observer);
     workspace.width=700;observer.callback();assert.equal(left.hidden,true);assert.equal(workspace.style.getPropertyValue('--sidebar-width'),'0px');assert.equal(right['aria-valuenow'],preferred);
     workspace.width=400;observer.callback();assert.equal(right['aria-valuenow'],'180');assert.equal(right['aria-valuemin'],'180');assert.equal(right['aria-valuemax'],'180');
-    workspace.width=1400;observer.callback();assert.equal(left.hidden,false);assert.equal(right['aria-valuenow'],preferred);assert.equal(page.networkRequests.length,saved?0:1);
+    workspace.width=1400;observer.callback();assert.equal(left.hidden,false);assert.equal(right['aria-valuenow'],preferred);assert.equal(page.networkRequests.length,saved?0:2);
   }
 });
 
@@ -324,6 +324,20 @@ test('compound rendering keeps every fact in List and retains routes and manual 
 
 const settle=()=>new Promise(setImmediate);
 const requestedQuery=page=>JSON.parse(new URL('http://localhost'+page.networkRequests.filter(url=>url.startsWith('/api?')&&JSON.parse(new URL('http://localhost'+url).searchParams.get('params')).method).at(-1)).searchParams.get('params'));
+test('the live footer shows the full workspace path independently of graph navigation',async t=>{
+  const workspaceRoot='/work/Projects & <Examples>/App';
+  const page=await render([entity('workspace','workspace')],[],false,{fetch:(raw,view)=>({ok:true,json:async()=>
+    new URL(raw,'http://localhost').searchParams.get('method')==='host.context'?{workspaceRoot}:view})});
+  t.after(()=>page.cy.destroy());
+  const footerPath=page.elements.get('workspace-root-path');
+  assert.equal(footerPath.textContent,workspaceRoot);
+  assert.equal(footerPath.title,workspaceRoot);
+  assert.equal(footerPath.hidden,false);
+  assert.equal(footerPath.innerHTML,undefined);
+  page.elements.get('level').value='module';page.elements.get('level').onchange();await settle();
+  assert.equal(footerPath.textContent,workspaceRoot);
+  assert.equal(page.networkRequests.filter(raw=>new URL(raw,'http://localhost').searchParams.get('method')==='host.context').length,1);
+});
 test('the source toolbar opens the pinned specification before reading, and Back restores the graph',async t=>{
   const specificationReads=[];
   const page=await render([entity('workspace','workspace')],[],false,{fetch:(raw,view)=>{

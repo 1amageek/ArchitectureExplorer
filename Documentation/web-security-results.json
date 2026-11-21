@@ -10,6 +10,7 @@
     "one-use token creates host-only HttpOnly/SameSite session for local HTTP",
     "launch token replay rejected",
     "authenticated HTTP reads the shared daemon snapshot",
+    "the workspace root is available only to an authenticated same-origin browser session",
     "ordinary authenticated browser hosts have no property context route",
     "thread-bound browser reads exact snapshot sources and rejects wrong recipients and missing CSRF",
     "real Swift file outlines retain nested actor/method ownership through authenticated filtered queries",
@@ -25,5 +26,5 @@
     "an unpaired daemon rejects startup and emits a terminal event to existing browser sessions",
     "same paired build restores index delivery to an existing authenticated browser session"
   ],
-  "passed": 24
+  "passed": 25
 }

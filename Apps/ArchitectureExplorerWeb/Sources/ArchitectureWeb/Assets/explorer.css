@@ -318,7 +318,8 @@ main:has(#specification-reader:not([hidden])) > .canvas-wrap { display: none; }
 .inspector .evidence { margin-top: 10px; padding-left: 9px; border-left: 2px solid var(--border); color: var(--secondary); font-size: 10px; line-height: 1.7; }
 #empty { position: absolute; top: 45%; width: 100%; color: var(--secondary); font-size: 12px; text-align: center; }
 footer { display: flex; align-items: center; gap: 12px; padding: 0 10px; border-top: 1px solid var(--border); background: var(--chrome); color: var(--secondary); font-size: 10px; min-width: 0; }
-#footer-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#workspace-root-path, #footer-status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#workspace-root-path { max-width: 65%; color: var(--text); user-select: text; flex-shrink: .4; }
 footer > span:last-child { margin-left: auto; white-space: nowrap; }
 @media (max-width: 1100px) {
   .workspace-body { --sidebar-default: 190px; --inspector-default: 240px; }

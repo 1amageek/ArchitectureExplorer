@@ -70,6 +70,7 @@ struct ExplorerApp: App {
       }
       if request.queryParameters.rawValue("method") == "host.context", let context = await authority.context(request) {
         var fields = context.object
+        fields["workspaceRoot"] = .string(client.paths.root.path)
         if threadID != nil { fields["propertyActions"] = .bool(true) }
         let bytes = try CanonicalJSON.encode(JSONValue.object(fields))
         var headers = HTTPFields(); headers[.contentType] = "application/json"; headers[.cacheControl] = "no-store"

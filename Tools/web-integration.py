@@ -28,6 +28,7 @@ with tempfile.TemporaryDirectory(prefix='ae-web-') as directory:
         def request(path,method='GET',body=None,headers=None):
             conn=http.client.HTTPConnection(parts.hostname,parts.port,timeout=5);conn.request(method,path,body,headers or {});response=conn.getresponse();data=response.read();result=(response.status,response.headers,data);conn.close();return result
         status,_,page=request('/');assert status==200 and b'/assets/layout-model.js' in page
+        assert all(str(path).encode() not in page for path in (workspace,workspace.resolve()))
         status,_,layout=request('/assets/layout-model.js');assert status==200 and b'ArchitectureLayout' in layout
         checks.append('page loads its bundled shared layout model through the actual asset route')
         status,_,syntax=request('/assets/highlight.min.js')
@@ -53,6 +54,11 @@ with tempfile.TemporaryDirectory(prefix='ae-web-') as directory:
             return json.loads(data)
         host = graph('host.context', {})
         assert 'propertyActions' not in host
+        reported_root=Path(host['workspaceRoot'])
+        assert reported_root.is_absolute() and reported_root.samefile(workspace),(reported_root,workspace)
+        assert request('/api?method=host.context')[0]==403
+        assert request('/api?method=host.context',headers={'Cookie':cookie,'Origin':'https://attacker.invalid'})[0]==403
+        checks.append('the workspace root is available only to an authenticated same-origin browser session')
         status, _, _ = request('/properties', 'POST', '{}', {'Cookie':cookie, 'Origin':origin, 'Authorization':'Bearer '+host['csrf']})
         assert status == 404, status
         checks.append('ordinary authenticated browser hosts have no property context route')
