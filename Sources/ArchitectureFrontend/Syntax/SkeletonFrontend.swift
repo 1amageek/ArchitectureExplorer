@@ -24,10 +24,13 @@ public struct SkeletonFrontend: FrontendProvider {
           scope: "synchronous sequential/if/while/return/break/continue; Swift guard",
           reason: "Unsupported control effects reject the entire function."),
       ]
-    }
+    } + [Capability(language: "typescript", producer: identity, feature: "declarations", supported: true,
+      scope: "saved TypeScript/TSX; lexical declarations and static relative imports",
+      reason: "Original AST extraction; compiler resolution and CFG are outside this capability.")]
   }
   public func analyze(_ input: SourceInput) throws -> FrontendResult {
     let root = try SyntaxParser().parse(input)
+    if input.language == "typescript" { return try TypeScriptOutline(input: input, tree: root, producer: identity).result() }
     let source = String(decoding: input.bytes, as: UTF8.self)
     // FIXME(INCOMPLETE_IMPLEMENTATION): The upstream skeleton pass is synchronous and cannot be forcibly cancelled.
     // The production syntax provider invokes it after the bounded original-AST parse.

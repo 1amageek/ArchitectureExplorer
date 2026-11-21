@@ -25,6 +25,9 @@ public struct ControlFlowProvider: Sendable {
       }
   }
   public func analyze(_ input: SourceInput, function: Entity) throws -> FrontendResult {
+    guard ["swift", "rust"].contains(input.language) else {
+      throw ArchitectureError("UNSUPPORTED_CAPABILITY", "Control-flow analysis is unavailable for " + input.language + ".", exitCode: 3)
+    }
     let root = try SyntaxParser().parse(input)
     guard let anchor = function.anchor, anchor.digest == input.digest else {
       throw ArchitectureError(

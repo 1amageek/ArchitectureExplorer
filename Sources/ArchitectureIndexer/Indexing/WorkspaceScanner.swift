@@ -5,6 +5,14 @@ import Darwin
 
 public struct WorkspaceScanner: Sendable {
   public init() {}
+  static func sourceLanguage(_ path: String) -> String? {
+    switch (path as NSString).pathExtension {
+    case "swift": "swift"
+    case "rs": "rust"
+    case "ts", "tsx": "typescript"
+    default: nil
+    }
+  }
   public func capture(paths: WorkspacePaths, configuration: IndexConfiguration, generation: Int)
     throws -> (sources: [SourceInput], catalogs: [SourceInput], inputs: [String: String], diagnostics: [Diagnostic])
   {
@@ -62,8 +70,7 @@ public struct WorkspaceScanner: Sendable {
         if configuration.accepts(relative) { localDSL.insert(relative) }
         continue
       }
-      let sourceLanguage =
-        url.pathExtension == "swift" ? "swift" : (url.pathExtension == "rs" ? "rust" : nil)
+      let sourceLanguage = Self.sourceLanguage(relative)
       let contextFile = [
         "Package.swift", "Package.resolved", "Cargo.toml", "Cargo.lock", "architecture.json",
         "rust-toolchain.toml", ".swift-version",
@@ -146,10 +153,10 @@ public struct WorkspaceScanner: Sendable {
       }
     }
     inputs["@configuration"] = configuration.digest
-    inputs["@provider"] = "skeleton-1215a3b+tree-sitter-0.25.0+syntax-v8"
+    inputs["@provider"] = "skeleton-1215a3b+tree-sitter-0.25.0+syntax-v9"
     inputs["@designDocuments"] = "markdown-v1"
     inputs["@indexer"] = "snapshot-lifecycle-v2"
-    inputs["@c4"] = "backstage-v3+structurizr-v7"
+    inputs["@c4"] = "backstage-v3+structurizr-v8"
     inputs["@swiftpm"] = "literal-manifest-v1"
     inputs["@cfg"] = ControlFlowProvider.version
     inputs["@toolchain"] = "swift-6.4.1"

@@ -406,6 +406,7 @@
     ['calls',{key:'calls',label:'Calls',token:'call',line:'solid'}],
     ['candidateCalls',{key:'candidate-calls',label:'Possible calls',token:'call',line:'dashed'}],
     ['candidateTypeReference',{key:'candidate-types',label:'Possible type references',token:'reference',line:'dashed'}],
+    ['candidateLocalImport',{key:'local-imports',label:'Possible local imports',token:'dependency',line:'dashed'}],
     ['usesType',{key:'types',label:'Type references',token:'reference',line:'solid'}],
     ['references',{key:'references',label:'References',token:'reference',line:'dashed'}],
     ['memberOf',{key:'membership',label:'Design membership',token:'membership',line:'solid'}],
@@ -422,7 +423,7 @@
     if(edge.kind==='controlFlow'&&branchStyles.has(branch))return branchStyles.get(branch);
     return relationStyles.get(edge.kind)||relationStyles.get('other');
   }
-  const relationName = edge => edge.attributes?.['context.operation'] || (edge.kind==='candidateTypeReference'?'Possible type reference':'') || [edge.kind,edge.attributes?.['cfg.branch']].filter(Boolean).join(' / ');
+  const relationName = edge => edge.attributes?.['context.operation'] || (edge.kind==='candidateTypeReference'?'Possible type reference':edge.kind==='candidateLocalImport'?'Possible local import':'') || [edge.kind,edge.attributes?.['cfg.branch']].filter(Boolean).join(' / ');
   function relationSwatch(presentation){
     const swatch=text('span','','relation-swatch');swatch.setAttribute('aria-hidden','true');
     swatch.style.borderTopColor=getComputedStyle(document.documentElement).getPropertyValue('--graph-edge-'+presentation.token).trim();swatch.style.borderTopStyle=presentation.line;
@@ -593,7 +594,7 @@
       ['Neighbors','neighbors',()=>go({method:'graph.neighbors',focus:entity.id,depth:2,direction:$('direction').value,...pinned})],
       ['Impact','impact',()=>go({method:'graph.impact',focus:entity.id,depth:2,...pinned})]
     ];
-    if(['function','method'].includes(entity.kind))commands.push(['Control flow','controlFlow',()=>go({method:'graph.cfg',focus:entity.id,depth:2,...pinned})]);
+    if(['function','method'].includes(entity.kind)&&entity.language!=='typescript')commands.push(['Control flow','controlFlow',()=>go({method:'graph.cfg',focus:entity.id,depth:2,...pinned})]);
     return commands.concat(verification);
   }
   let propertySession;
@@ -1556,7 +1557,7 @@
       for(const edge of references){
         const outgoing=edge.source===node.id;
         const label=file?names.get(edge.source)+' → '+names.get(edge.target):outgoing?'→ '+names.get(edge.target):'← '+names.get(edge.source);
-        links.append(button(label,()=>inspectTypeReference(edge)));
+        links.append(button(label,()=>inspectSyntaxReference(edge)));
       }
       box.append(text('h3',file?'CROSS-FILE TYPE REFERENCES':'POSSIBLE TYPE REFERENCES'),links);
     }
@@ -1573,10 +1574,10 @@
     try{const source=await rpc('source.read',{entityID:node.id,snapshotID:view.snapshotID});if(serial!==inspection||selected?.id!==node.id)return;box.append(codeBlock(source.text,node.language,source.truncated));}catch(error){if(serial===inspection&&selected?.id===node.id)box.append(text('p',error.message));}
   }
   function inspectSourceEdge(edge,restore=false){
-    if(edge.kind==='candidateTypeReference')return inspectTypeReference(edge,restore);
+    if(['candidateTypeReference','candidateLocalImport'].includes(edge.kind))return inspectSyntaxReference(edge,restore);
     inspectContextEdge(edge.id);
   }
-  async function inspectTypeReference(edge,restore=false){
+  async function inspectSyntaxReference(edge,restore=false){
     clearSelection(false);selectedFact=edge.id;
     const selectedEdge=cy.getElementById(edge.id).select();
     refreshEdgeFocus();
@@ -1587,10 +1588,11 @@
     const serial=inspection, snapshotID=view.snapshotID;
     const owner=view.nodes.find(n=>n.id===edge.source),target=view.nodes.find(n=>n.id===edge.target);
     const site=edge.attributes?.['reference.site'],box=$('inspector');
-    box.replaceChildren(text('h2','Possible type reference'),text('p',owner.name+' → '+target.name));
+    box.replaceChildren(text('h2',relationName(edge)),text('p',owner.name+' → '+target.name));
     external?.modelSlot(box,{fact:edge.id});
     if(!site||!owner.anchor)return;
-    box.append(text('p','The source spelling matches one type declaration in '+edge.attributes['reference.scope']+'.'),
+    const explanation=edge.kind==='candidateLocalImport'?'The relative path matches one indexed file. Compiler resolution has not been established.':'The source spelling matches one type declaration in '+edge.attributes['reference.scope']+'.';
+    box.append(text('p',explanation),
       text('h3','SOURCE EXPRESSION'),text('p',owner.anchor.path+':'+site.line,'reference-location'));
     if(saved){box.append(text('p','Source text is unavailable in this saved view.'));return;}
     try{

@@ -1,5 +1,4 @@
 import ArchitectureCore
-import CArchitectureSyntax
 import Foundation
 
 public enum RepositoryOutline {
@@ -25,7 +24,7 @@ public enum RepositoryOutline {
     }
     let input = SourceInput(workspaceID: "", path: path, language: language, bytes: Data(source.utf8), contextDigest: "", generation: 0)
     do {
-      let syntax = try language == "typescript" ? SyntaxParser().parse(input, grammar: tree_sitter_tsx()) : SyntaxParser().parse(input)
+      let syntax = try SyntaxParser().parse(input)
       var nodes: [JSONValue] = []
       var byte = 0, line = 1
       var pending: [(SyntaxNode, String?)] = [(syntax, nil)]

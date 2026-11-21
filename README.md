@@ -1,6 +1,6 @@
 # Architecture Explorer
 
-Architecture Explorer is a local, read-only workspace browser for Swift and Rust. Start with the system and its dependencies, drill into containers and code, and inspect the evidence behind a relationship. The browser, CLI, and MCP server share a workspace daemon and its snapshots.
+Architecture Explorer is a local, read-only workspace browser for Swift, Rust, and opt-in TypeScript. Start with the system and its dependencies, drill into containers and code, and inspect the evidence behind a relationship. The browser, CLI, and MCP server share a workspace daemon and its snapshots.
 
 ## Quick start
 
@@ -35,7 +35,7 @@ flowchart TD
 | **C3 · Components** | Design groups and implementation types in the scope resolved from the selected container's entry point. |
 | **C4 · Code** | Indexed files, declarations, and relationships. Files can contain their declarations, and supported functions can open a control-flow graph. |
 
-A container's typed source link must resolve to a unique declaration in the same snapshot. Explorer keeps a container with a missing or stale link inspectable on the Map. Select an object, declaration, or edge to see its source or model declaration and its recorded evidence in the Inspector. [Map navigation and source bindings](Documentation/C4-CONTEXT-SPEC.md#from-a-container-to-its-implementation)
+A container's typed source link must resolve to a unique file or declaration in the same snapshot. Add `typescript` to `languages` in `architecture.json` to index `.ts` and `.tsx` files. Explorer keeps a container with a missing or stale link inspectable on the Map. Select an object, declaration, or edge to see its source or model declaration and its recorded evidence in the Inspector. [Map navigation and source bindings](Documentation/C4-CONTEXT-SPEC.md#from-a-container-to-its-implementation)
 
 | To do this | Use |
 |---|---|

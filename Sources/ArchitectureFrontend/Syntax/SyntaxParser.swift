@@ -10,6 +10,7 @@ public struct SyntaxParser: Sendable {
     switch input.language {
     case "swift": pointer = tree_sitter_swift()
     case "rust": pointer = tree_sitter_rust()
+    case "typescript": pointer = tree_sitter_tsx()
     default: throw ArchitectureError("UNSUPPORTED_LANGUAGE", input.language, exitCode: 3)
     }
     return try parse(input, grammar: pointer)

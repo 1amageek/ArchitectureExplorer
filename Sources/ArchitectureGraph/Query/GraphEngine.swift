@@ -131,15 +131,26 @@ public struct GraphEngine: GraphQuerying {
         var paths: Set<String> = [anchor.path]
         let owners = Set(outlineParents[file.id, default: []].map(\.source).filter { entities[$0]?.kind == "module" })
         implementationScope = "Entry file · " + file.name
-        if owners.count == 1, let owner = owners.first, let module = entities[owner] {
+        if entry.kind != "file", owners.count == 1, let owner = owners.first, let module = entities[owner] {
           for fact in containment where fact.source == owner {
             if let child = entities[fact.target], child.kind == "file", let path = child.anchor?.path { paths.insert(path) }
           }
           implementationScope = "Module · " + module.name
         }
         selected = query.level == "component" ? [entryID] : []
-        for entity in ordered where kinds.contains(entity.kind) && entity.anchor.map({ paths.contains($0.path) }) == true {
+        for entity in ordered where (entry.kind != "file" || query.level == "function")
+          && kinds.contains(entity.kind) && entity.anchor.map({ paths.contains($0.path) }) == true {
           selected.insert(entity.id)
+        }
+        if entry.kind == "file", componentOverview {
+          let declarationKinds = kinds.union(["function", "method", "variable"])
+          for fact in containment where fact.source == entryID {
+            if let node = entities[fact.target], declarationKinds.contains(node.kind) { selected.insert(node.id) }
+          }
+          for fact in eligible where fact.kind == "candidateLocalImport" && fact.source == entryID {
+            selected.insert(fact.target)
+            prioritized.insert(fact.target)
+          }
         }
         for fact in snapshot.facts where query.level == "component" && fact.kind == "memberOf" && entities[fact.target]?.kind == "designGroup" {
           if let path = entities[fact.source]?.anchor?.path, paths.contains(path) { selected.insert(fact.target) }
@@ -365,11 +376,14 @@ public struct GraphEngine: GraphQuerying {
     let nodes = ordered.filter { visible.contains($0.id) }
     var projected = eligible.filter { visible.contains($0.source) && visible.contains($0.target) }
     projected.append(contentsOf: traversedReferences.values.filter { visible.contains($0.source) && visible.contains($0.target) })
+    if componentOverview, let entry = query.focus, entities[entry]?.kind == "file" {
+      projected.removeAll { $0.kind == "candidateLocalImport" && $0.source != entry }
+    }
     if contextView, let subject = contextSubject {
       projected.removeAll { $0.source != subject && $0.target != subject }
     }
     if aggregation {
-      projected.removeAll { !["contains", "memberOf"].contains($0.kind) }
+      projected.removeAll { !["contains", "memberOf", "candidateLocalImport"].contains($0.kind) }
       let parentEdges = snapshot.facts.filter { $0.kind == "contains" }
       let parents = Dictionary(grouping: parentEdges, by: \.target)
       func ancestor(_ id: String) -> String? {
@@ -385,7 +399,7 @@ public struct GraphEngine: GraphQuerying {
       }
       var groups: [String: [Fact]] = [:]
       var endpoints: [String: (String, String, String)] = [:]
-      for edge in eligible where !["contains", "memberOf"].contains(edge.kind) {
+      for edge in eligible where !["contains", "memberOf", "candidateLocalImport"].contains(edge.kind) {
         guard let from = ancestor(edge.source), let to = ancestor(edge.target), from != to else {
           continue
         }

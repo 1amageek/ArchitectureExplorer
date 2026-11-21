@@ -149,7 +149,7 @@ public actor WorkspaceIndexer {
         if [CatalogContext.producer, StructurizrContext.producer, SwiftPMManifest.producer].contains(fact.producer) { return false }
         if fact.producer == "project.metadata", old.contextDigest != contextDigest { return false }
         if fact.producer == provider.identity { return retainedPaths.contains(fact.scope) }
-        if fact.producer == "project.filesystem" || fact.producer == "design.configuration" {
+        if ["project.filesystem", "design.configuration", LocalSourceImports.producer].contains(fact.producer) {
           return false
         }
         return !invalidatedPaths.contains(fact.scope)
@@ -207,7 +207,7 @@ public actor WorkspaceIndexer {
       coverage.append(
         Coverage(
           producer: provider.identity, scope: path,
-          language: path.hasSuffix(".rs") ? "rust" : "swift", freshness: "unknown",
+          language: WorkspaceScanner.sourceLanguage(path) ?? "none", freshness: "unknown",
           completeness: "failed", diagnostics: [diagnostic]))
     }
     let root = Entity(
@@ -288,12 +288,15 @@ public actor WorkspaceIndexer {
         }
       }
     }
+    for fact in try LocalSourceImports.facts(nodes: nodeMap, inputs: captured.inputs, evidence: evidenceMap) {
+      factMap[fact.id] = fact
+    }
     var mapDiagnostics: [Diagnostic] = []
     coverage.removeAll { [CatalogContext.producer, StructurizrContext.producer].contains($0.producer) }
     if captured.inputs["@mapCaptureFailure"] == nil, let dsl = captured.catalogs.first(where: { $0.path == WorkspacePaths.architectureModelFilename }) {
       do {
         let map = try StructurizrContext(workspaceID: paths.workspaceID, input: dsl, catalogs: captured.catalogs, contextDigest: contextDigest,
-          indexed: nodeMap, inputs: captured.inputs)
+          indexed: nodeMap, inputs: captured.inputs, failedSources: Set(failures.keys))
         for node in map.nodes { nodeMap[node.id] = node }
         for fact in map.facts { factMap[fact.id] = fact }
         for item in map.evidence { evidenceMap[item.id] = item }

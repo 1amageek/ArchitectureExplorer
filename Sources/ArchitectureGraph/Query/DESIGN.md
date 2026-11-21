@@ -41,3 +41,9 @@ Type overviews, file outlines, Neighbors and Impact use one snapshot-scoped cand
 C2 selects a pinned software system and its typed runtime children using the [C4 projection contract](../../../Documentation/C4-CONTEXT-SPEC.md). Every container page includes its owner within the declared node budget.
 
 A focused component overview follows the entry declaration through its exact file to its recorded module, or keeps the entry-file scope if unresolved. The entry and direct candidate type targets have priority within the first page, even when the targets are outside that scope. Focused function outlines still show declaration detail.
+
+A pinned C2 file entry opens a C3 projection of the entry file, its lexical
+top-level declarations, design groups and direct recorded local import file
+endpoints. Import edges preserve their fact identity across C3, Neighbors
+and Impact. The query does not traverse transitive imports or perform build
+resolution. Code outlines continue to follow recorded containment.

@@ -172,9 +172,11 @@ references. These references do not authorize reads or establish verified eviden
 
 Only C1 and C2 use Map. A local container may declare one typed link in a
 contiguous annotation preceding its declaration: `// Entry: <kind> <startByte>..<endByte> sha256=<digest> <relative path>`.
-Offsets are half-open UTF-8 bytes. Explorer resolves this link only to a
-unique indexed declaration of that kind and range in that exact current input
-of the pinned snapshot. Ordinary citation comments do not establish a link.
+Offsets are half-open UTF-8 bytes. Use an indexed declaration kind or `file`
+with the full byte range for an entry file that has no single named declaration.
+Explorer resolves the link only to a unique indexed entity matching the kind,
+path, digest and range in the pinned snapshot. Ordinary citation comments do
+not establish a link.
 
 Open components switches to the source graph at the indexed entry declaration.
 The initial page prioritizes the entry and the types it directly references,
@@ -184,6 +186,16 @@ Cross-module Swift candidates require a direct recorded module dependency and
 an explicit import in the source file. Their edges remain lexical candidates
 with source evidence. Open code follows recorded source containment in the same
 snapshot. Missing or stale entry bindings leave the container inspectable.
+
+A file entry opens its own top-level declarations and recorded direct local
+imports. Imported files stay outside the entry file and open their own code.
+The import edge exposes the source statement. TypeScript indexing is opt-in
+with `typescript` in `architecture.json`. Static relative imports and
+re-exports can link to one matching current indexed file. Resolution checks
+explicit paths and, for extensionless imports, `.ts`, `.tsx` and directory index
+files. Aliases, package resolution and dynamic imports are outside the
+projection. Single-click selects for inspection. Double-click or Open
+components opens the pinned source graph.
 
 ### Map objects
 

@@ -48,9 +48,9 @@ public struct IndexConfiguration: Sendable {
         "INVALID_CONFIGURATION", "Unknown analysis configuration key.", exitCode: 2)
     }
     let languages = value["languages"].array.compactMap(\.string)
-    guard !languages.isEmpty, Set(languages).isSubset(of: ["swift", "rust"]) else {
+    guard !languages.isEmpty, Set(languages).isSubset(of: ["swift", "rust", "typescript"]) else {
       throw ArchitectureError(
-        "UNSUPPORTED_LANGUAGE", "Supported languages are swift and rust.", exitCode: 3)
+        "UNSUPPORTED_LANGUAGE", "Supported languages are swift, rust and typescript.", exitCode: 3)
     }
     self.value = value
     self.languages = languages

@@ -59,7 +59,7 @@ struct StructurizrContext {
     return result
   }
 
-  init(workspaceID: String, input: SourceInput, catalogs: [SourceInput], contextDigest: String, indexed: [String: Entity], inputs: [String: String]) throws {
+  init(workspaceID: String, input: SourceInput, catalogs: [SourceInput], contextDigest: String, indexed: [String: Entity], inputs: [String: String], failedSources: Set<String>) throws {
     guard input.bytes.count <= 512 * 1024, String(data: input.bytes, encoding: .utf8) != nil else {
       throw ArchitectureError("C4_DSL_INVALID", "\(input.path) must be UTF-8 within 512 KiB.")
     }
@@ -204,8 +204,8 @@ struct StructurizrContext {
     var bindings: [EntryLink: [String]] = [:]
     if !requested.isEmpty {
       for entity in indexed.values {
-        guard let a = entity.anchor, inputs[a.path] == a.digest,
-          ["type", "interface", "actor", "function", "method"].contains(entity.kind) else { continue }
+        guard let a = entity.anchor, inputs[a.path] == a.digest, !failedSources.contains(a.path),
+          ["file", "type", "interface", "actor", "function", "method"].contains(entity.kind) else { continue }
         let key = EntryLink(path: a.path, digest: a.digest, kind: entity.kind, start: a.startByte, end: a.endByte)
         if requested.contains(key) { bindings[key, default: []].append(entity.id) }
       }

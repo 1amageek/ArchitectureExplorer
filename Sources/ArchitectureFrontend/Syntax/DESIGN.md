@@ -47,3 +47,9 @@ The original AST capture rejects invalid syntax, more than 300000 nodes or nesti
 Repository map previews parse a single complete Swift, Rust or TypeScript/TSX source of up to 16 KiB on demand. The bounded original grammar produces lexical declaration cards with their parsed language and source byte ranges. This view never calls the workspace indexer, executes a manifest or infers cross-file bindings. Unavailable outlines leave an explicit reason alongside the bounded source preview.
 
 A type records the first unqualified type spelling, direct callee, or simple member receiver for each referenced name in its lexical body and header. Nested types own their own sites. The records store names, lines and byte ranges, not source bodies. The syntax cache key advances when this contract changes.
+
+TypeScript is opt-in for workspace indexing. The original TypeScript/TSX AST
+provides lexical declarations, file ownership and static relative import
+sites. It uses the same immutable anchors and syntax producer contract.
+There is no TypeScript CFG capability. The indexer resolves candidate file
+paths after each reconciliation, using only unique current indexed matches.
