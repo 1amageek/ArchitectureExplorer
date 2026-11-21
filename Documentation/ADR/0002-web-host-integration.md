@@ -1,0 +1,5 @@
+# Web host integration
+
+The pinned swift-web public WebSocketRouteBuilder validates Origin but offers no application-supplied pre-upgrade session check. The native host's public SwiftWebDevelopmentHooks.registerRoutes injection point exposes the public RoutesBuilder with a pre-upgrade callback. ArchitectureServer owns one installation per helper process, uses that callback to validate session, exact Host and exact Origin before upgrade, then resets the hooks on shutdown. This does not use sweb dev, a development server, runtime builds or a Node installation. All other development hook behavior remains disabled. Upgrade authorization is behaviorally tested against the actual host.
+
+Session launch credentials live only in the URL fragment and are exchanged once within 90 seconds. The session cookie is HttpOnly, SameSite=Strict and host-only. HTTP loopback does not set Secure; this product does not support HTTPS or external binding. Every graph API is read-only. Filesystem source is obtained through the Client by entity identity and input digest, never an arbitrary URL path.

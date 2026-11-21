@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "input-manifest.schema.json",
+  "title": "input-manifest / aex-1.3",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "workspaceID": {
+      "type": "string"
+    },
+    "snapshotID": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 256
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "contextDigest": {
+      "type": "string"
+    },
+    "dependencyStatus": {
+      "const": "unknown"
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "maxItems": 10000
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "workspaceID",
+    "snapshotID",
+    "scope",
+    "files",
+    "context",
+    "contextDigest",
+    "dependencyStatus",
+    "coverage"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "ArgumentSchema": {
+      "type": "object",
+      "maxProperties": 12,
+      "properties": {
+        "type": {
+          "enum": [
+            "object",
+            "array",
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "null"
+          ]
+        },
+        "properties": {
+          "type": "object",
+          "maxProperties": 64,
+          "additionalProperties": {
+            "$ref": "#/$defs/ArgumentSchema"
+          }
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64
+        },
+        "additionalProperties": {
+          "const": false
+        },
+        "items": {
+          "$ref": "#/$defs/ArgumentSchema"
+        },
+        "enum": {
+          "type": "array",
+          "items": {},
+          "maxItems": 64
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "Binding": {
+      "type": "object",
+      "properties": {
+        "workspaceID": {
+          "type": "string"
+        },
+        "snapshotID": {
+          "type": "string"
+        },
+        "inputManifestDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "entityIDs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 500
+        },
+        "factIDs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1500
+        }
+      },
+      "required": [
+        "workspaceID",
+        "snapshotID",
+        "inputManifestDigest",
+        "entityIDs",
+        "factIDs"
+      ],
+      "additionalProperties": false
+    },
+    "Contribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 320
+        },
+        "kind": {
+          "enum": [
+            "annotation",
+            "graph",
+            "view"
+          ]
+        },
+        "binding": {
+          "type": "object",
+          "properties": {
+            "workspaceID": {
+              "type": "string"
+            },
+            "snapshotID": {
+              "type": "string"
+            },
+            "inputManifestDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "entityIDs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 500
+            },
+            "factIDs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 1500
+            }
+          },
+          "required": [
+            "workspaceID",
+            "snapshotID",
+            "inputManifestDigest",
+            "entityIDs",
+            "factIDs"
+          ],
+          "additionalProperties": false
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "binding",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "ActionDefinition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[\\w.\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "operation": {
+          "enum": [
+            "execute",
+            "cancel"
+          ]
+        },
+        "effect": {
+          "const": "externalExecution"
+        },
+        "requiresConfirmation": {
+          "type": "boolean"
+        },
+        "inputSchemaID": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[\\w.\\-]+$"
+        },
+        "inputSchema": {
+          "$ref": "#/$defs/ArgumentSchema"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "operation",
+        "effect",
+        "requiresConfirmation",
+        "inputSchemaID",
+        "inputSchema"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

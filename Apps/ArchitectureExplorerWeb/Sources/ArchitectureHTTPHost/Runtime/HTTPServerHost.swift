@@ -1,0 +1,80 @@
+import Logging
+@_spi(Hosting) import SwiftWebCore
+
+/// Connects a rendered SwiftWeb app to the native HTTP/WebSocket server.
+public struct HTTPServerHost: Sendable {
+    private let hostname: String
+    private let port: Int
+    private let transport: HTTPServerTransportConfiguration
+    private let clientRuntime: ClientRuntimeConfiguration?
+    private let sessionStorage: any HTTPServerSessionStorage
+
+    public init(
+        hostname: String = "127.0.0.1",
+        port: Int = 8080,
+        transport: HTTPServerTransportConfiguration = .plaintext,
+        clientRuntime: ClientRuntimeConfiguration? = nil,
+        sessionStorage: any HTTPServerSessionStorage = InMemorySessionStorage()
+    ) {
+        self.hostname = hostname
+        self.port = port
+        self.transport = transport
+        self.clientRuntime = clientRuntime
+        self.sessionStorage = sessionStorage
+    }
+
+    /// Renders an app and returns a configured server installation without
+    /// starting the server loop.
+    public func render<AppType: App>(
+        _ app: AppType,
+        logger: Logger = Logger(label: "swiftweb.host.http-server")
+    ) async throws -> HTTPServerAppInstallation {
+        let developmentHooks = await SwiftWebDevelopmentSupport.shared.currentHooks()
+        let parentMonitor = developmentHooks.startParentMonitor(logger)
+
+        do {
+            let renderedApp = try await AppRenderer.render(
+                app,
+                in: AppRenderingContext(
+                    serverConfiguration: ServerConfiguration(
+                        hostname: hostname,
+                        port: port
+                    ),
+                    clientRuntime: clientRuntime,
+                    developmentHooks: developmentHooks
+                )
+            )
+            let handler = SwiftWebHostHTTPHandler(
+                renderedApp: renderedApp,
+                sessionStorage: sessionStorage,
+                logger: logger
+            )
+            let server = SwiftWebNIOHTTPServer(
+                hostname: hostname,
+                port: port,
+                transport: transport,
+                handler: handler,
+                logger: logger
+            )
+            return HTTPServerAppInstallation(
+                server: server,
+                renderedApp: renderedApp,
+                developmentParentMonitor: parentMonitor
+            )
+        } catch {
+            parentMonitor?.cancel()
+            throw error
+        }
+    }
+
+    public func run<AppType: App>(_ app: AppType) async throws {
+        let installation = try await render(app)
+        do {
+            try await installation.serve()
+        } catch {
+            try await installation.shutdown()
+            throw error
+        }
+        try await installation.shutdown()
+    }
+}

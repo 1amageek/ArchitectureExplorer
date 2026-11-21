@@ -1,0 +1,32 @@
+# ArchitectureCore
+
+## Purpose and Scope
+Values, diagnostics, bounded filesystem and socket transport.
+Parent: [system](../../DESIGN.md). Native SwiftPM module root.
+- [Values](Values/DESIGN.md)
+- [Diagnostics](Diagnostics/DESIGN.md)
+- [Filesystem](Filesystem/DESIGN.md)
+- [Transport](Transport/DESIGN.md)
+
+## Responsibilities and Boundaries
+Own only the responsibility above. Source code is read-only. Facts are scoped by producer and input generation.
+
+## Related Designs
+| Design | Relationship | Contract Used | Cautions |
+|---|---|---|---|
+| [System](../../DESIGN.md) | parent | Composition | Preserve formal independence |
+
+
+## Architecture
+```text
+Caller -> ArchitectureCore public contract -> Values, Diagnostics, Filesystem, Transport
+```
+
+## Contracts and Invariants
+- Transfer values are immutable and Sendable.
+- Unsupported information is explicit, never an empty success.
+- Identity keys own lexical path, owner, kind and normalized signature; source revisions own exact bytes.
+- All facts retain evidence and immutable snapshot identity.
+
+## Verification and Change Impact
+Behavior owner: [ArchitectureTests](../../Tests/ArchitectureTests). Test successful behavior, malformed inputs, budgets and the concrete consumer path. Recheck direct dependents when a public contract changes.

@@ -1,0 +1,4 @@
+module CArchitectureSyntax [system] {
+ header "shim.h"
+ export *
+}

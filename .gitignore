@@ -1,0 +1,15 @@
+.build/
+.swiftpm/
+.DS_Store
+.architecture/
+Dist/
+__pycache__/
+*.pyc
+Sources/architecture/Commands/HostBuildIdentity.generated.swift
+.test-artifacts/
+
+Examples/*/Package.resolved
+
+# Machine-local verification output
+/Verification/**/*.log
+/Documentation/sourcekit-probe.json

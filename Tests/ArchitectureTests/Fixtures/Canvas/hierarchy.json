@@ -1,0 +1,1 @@
+{"schemaVersion": "1", "kind": "hierarchy", "title": "hierarchy", "nodes": [{"id": "a", "label": "Input", "role": "node", "details": {"condition": "x > 0"}}, {"id": "b", "label": "Output", "role": "node", "parentID": "a"}], "edges": [{"id": "ab", "source": "a", "target": "b", "role": "dependsOn", "label": "next"}]}

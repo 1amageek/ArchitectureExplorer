@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "CLI CFG retains every while condition",
+    "CLI pinned CFG preserves historical bytes and rejects missing recorded CFG",
+    "real MCP CFG preserves a pinned snapshot",
+    "CLI import preserves pinned IR without poisoning subsequent live generations",
+    "daemon incoming path reverses the recorded edge",
+    "daemon overview represents a direct fact exactly once",
+    "deleting a source after CFG removes its callable from live search",
+    "real provider backpressure ends at its send deadline and reaps the child",
+    "daemon stop during a blocked provider write exits and reaps owned processes"
+  ],
+  "passed": 9
+}

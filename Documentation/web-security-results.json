@@ -1,0 +1,27 @@
+{
+  "checks": [
+    "property analysis requires an originating Codex conversation",
+    "unknown Web host option fails before startup with a typed argument error",
+    "page loads its bundled shared layout model through the actual asset route",
+    "pinned Swift/Rust syntax grammars load locally before the renderer",
+    "unauthenticated graph HTTP rejected",
+    "foreign Host rejected",
+    "foreign Origin rejected",
+    "one-use token creates host-only HttpOnly/SameSite session for local HTTP",
+    "launch token replay rejected",
+    "authenticated HTTP reads the shared daemon snapshot",
+    "ordinary authenticated browser hosts have no property context route",
+    "thread-bound browser reads exact snapshot sources and rejects wrong recipients and missing CSRF",
+    "real Swift file outlines retain nested actor/method ownership through authenticated filtered queries",
+    "real Swift/Rust parsing through authenticated queries renders structured function/method nodes with original Edge endpoints in Cytoscape/ELK",
+    "snapshot-pinned incoming containment supplies breadcrumb ancestors outside the focused view",
+    "authenticated same-origin WebSocket upgrades",
+    "unauthenticated WebSocket upgrade rejected",
+    "foreign-origin WebSocket upgrade rejected",
+    "two loopback helpers remain authenticated in one browser cookie jar",
+    "both helpers upgrade WebSockets with their own session cookies",
+    "another helper session cookie cannot authenticate a peer",
+    "backend failure closes an authenticated stream without a self-await deadlock"
+  ],
+  "passed": 22
+}

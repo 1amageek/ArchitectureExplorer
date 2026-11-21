@@ -1,0 +1,65 @@
+{
+  "swiftSkeleton": "fb10ef666a30e892b9f3a4ca0740702c6c621d80",
+  "swiftWeb": "6edadb6cfa92e3a4b26a1e669329be38f45212f4",
+  "swiftTreeSitter": "0.25.0",
+  "assets": [
+    {
+      "package": "cytoscape",
+      "version": "3.33.1",
+      "file": "cytoscape.min.js",
+      "sha256": "f55947f3daa3bae53209d4b885c195c157f595c225e508a6b382598d9452d6e2"
+    },
+    {
+      "package": "cytoscape",
+      "version": "3.33.1",
+      "file": "cytoscape.LICENSE",
+      "sha256": "e4b62495bacaefaf330f38f226e20d1d60d658d444998ba7406a191f96a2e701"
+    },
+    {
+      "package": "elkjs",
+      "version": "0.11.0",
+      "file": "elk.bundled.js",
+      "sha256": "cbf61b0182e9085d36dcd5b392f57cc816273169ac40bde80b52b808444c5cf8"
+    },
+    {
+      "package": "elkjs",
+      "version": "0.11.0",
+      "file": "elk.LICENSE.md",
+      "sha256": "89591d4578fb1ebd91501312a3d25f021bd865a2e436641c1cf7b1bc7e3c1617"
+    },
+    {
+      "package": "elkjs",
+      "version": "0.11.0",
+      "file": "elk-worker.min.js",
+      "sha256": "c0dc844ac1739a1e1e4f64d08a9ec4594818d5aa7e0cb26e5096b6d34b864e2b"
+    },
+    {
+      "package": "@highlightjs/cdn-assets",
+      "version": "11.12.0",
+      "file": "highlight.min.js",
+      "sha256": "9f4e4b1d71a93015d8a65c1672368b74ff47724ad6d8ede0b29251dac25e84f8",
+      "source": "https://registry.npmjs.org/@highlightjs/cdn-assets/-/cdn-assets-11.12.0.tgz"
+    },
+    {
+      "package": "@highlightjs/cdn-assets",
+      "version": "11.12.0",
+      "file": "highlight.LICENSE",
+      "sha256": "6c081431591d9df696c82dc598fe1423765b8a299b200ed00b281afd0f64c490",
+      "source": "https://registry.npmjs.org/@highlightjs/cdn-assets/-/cdn-assets-11.12.0.tgz"
+    },
+    {
+      "package": "three",
+      "version": "0.187.0",
+      "file": "three-c4.min.js",
+      "sha256": "840dc06c941710431399259f31ecb8edfbd4ee6ab95c46cfd25f53f1e53455ac",
+      "source": "https://registry.npmjs.org/three/-/three-0.187.0.tgz"
+    },
+    {
+      "package": "three",
+      "version": "0.187.0",
+      "file": "three.LICENSE",
+      "sha256": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
+      "source": "https://registry.npmjs.org/three/-/three-0.187.0.tgz"
+    }
+  ]
+}

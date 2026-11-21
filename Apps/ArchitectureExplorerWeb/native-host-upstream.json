@@ -1,0 +1,22 @@
+{
+  "repository": "https://github.com/1amageek/swift-web",
+  "revision": "6edadb6cfa92e3a4b26a1e669329be38f45212f4",
+  "license": "MIT",
+  "originalSHA256": {
+    "NIOWebSocketBinaryStorage.swift": "636a2528c62bd6cafa4291dac8e38cda736d06f01b7891bfcbcb675f277f2970",
+    "SwiftWebTLSConnectionErrorHandler.swift": "862a54f06fcd10b5da1a9a4dcd91fa102444555331b8abb0be3c4fefdcdb024f",
+    "HTTPServerWebRequestFactory.swift": "c61762495a61e82c44905a4d19e2871e769aad3c484d08370e54f9c25612a6cf",
+    "SwiftWebHostHTTPHandler.swift": "22e27cb5a5c590cfb6ba291898dba84ff801dd39ca6315dac192fe11a98f5699",
+    "HTTPServerSessions.swift": "b9ca16cc2435149edd702513fac3fe0039a5811aab0b1878d3786a4737dd3bf3",
+    "HTTPServerTransportConfigurationError.swift": "580e073dc9816254a6b1a2cdd69bd446aa3d2d90375e040745af0de53136d0c1",
+    "HTTPServerErrorResponder.swift": "9037864b906ac6a1d8a00aae465b8939cb3c67c54c232af1757e0339b8e5148b",
+    "HTTPServerAppInstallation.swift": "76f165b1068f1448ee3d2942ee5c139ad95e11dcd7ea313cf846a922398af770",
+    "HTTPServerHost.swift": "60d9385bf12331f11e5a6edfcfa9a1d8aa197afe823af78a7bf4a6a85b4d041c",
+    "SwiftWebNIOHTTPServer.swift": "5b6aed68ca0bf59807f23e26a52aa77f0b6ab80a5a9a821233067d8bc47b2ea1",
+    "HTTPServerTransportConfiguration.swift": "41897f6cc3c092b3f1a10a3ba8669cb5a4d9b8ccdeadb430da43f3b829443bc2"
+  },
+  "localChanges": [
+    "Close rejected/failed WebSocket upgrades before fallback.",
+    "Bound HTTP bodies and WebSocket frames to 4 MiB."
+  ]
+}

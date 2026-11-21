@@ -1,0 +1,5 @@
+digraph Dependencies {
+  rankdir=LR;
+  subgraph cluster_host { label="Host"; A [label="API"]; B [label="Store"]; A -> B [label="reads"]; }
+  C [label="External"]; B -> C; C -> A;
+}

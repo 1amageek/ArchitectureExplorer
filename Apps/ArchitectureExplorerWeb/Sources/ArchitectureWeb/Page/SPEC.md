@@ -1,0 +1,15 @@
+# Destination-first navigation
+
+| ID | Contract | Acceptance condition |
+|---|---|---|
+| NAV01 | Immediate destination | A navigation click commits its destination and loading state before any destination read or model resolution. Foreground browser work yields a paint before starting reads. |
+| NAV02 | Explicit lifecycle | Loading, running, result and failure remain distinguishable. A loading or failed destination never displays the previous graph as its result. Failures offer Retry without losing Back. |
+| NAV03 | Navigation ownership | Source hierarchy, repository scopes, imported files and sessions, Map reports and published model graphs share this lifecycle. Inspector previews update their selected subject before fetching source. |
+| NAV04 | Supersession | Back, Forward and a newer destination invalidate prior reads and layout replies. A late success or failure cannot replace the current destination. Reading or returning to a screen never confirms external execution. |
+| NAV05 | Verification access and evidence | Source nodes expose Verify model in their header options menu, usable without first selecting anything in Inspector. The header has no separate Verify button. Published node result marks are directly clickable and keyboard accessible. Linked Map objects expose Open verification report only in their context menu, opening directly or presenting an on-canvas report chooser without an Inspector prerequisite. Map captions contain no report controls. Results retain snapshot, reported scope, source correspondence and incomplete outcomes; attempts and loading do not imply verification success. |
+
+The page owns navigation and presentation. Canvas owns revisioned imported sessions. The extension provider owns authorized execution and publication. Existing action confirmation and source/snapshot authority remain unchanged.
+
+| PV01 | Project execution | A C4 system/container options menu exposes Verify project. Its destination appears before availability/preparation reads. The screen shows the selected subject, configuration and exact snapshot, then Run verification submits the registered Invar project action. |
+| PV02 | Project result | A new execution never substitutes a previous report for its result. Running, cancellation/failure and published passed/failed/incomplete remain distinguishable. The complete specification, implementation and correspondence inventory remains visible. Back never starts or redispatches execution. |
+| PV03 | Reviewed project gates | Schema-2 project reports retain the producer's five ordered workflow gates and return stage. Missing/blocked reviews cannot produce a green whole-project verdict even when scoped evidence passed. Gate nodes remain selectable and the summary exposes the return stage. Historical schema-1 reports retain their original evidence presentation. |

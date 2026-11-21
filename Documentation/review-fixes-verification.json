@@ -1,0 +1,91 @@
+{
+  "reviewBase": "8215b4b",
+  "host": "macOS 27.2.1 arm64",
+  "swift": "6.4.1",
+  "publicIRVersion": "1.0",
+  "IPCVersion": "1.0",
+  "cacheVersion": "1.1",
+  "CFGAlgorithmVersion": "2.0",
+  "swiftTestsPassed": 36,
+  "newSwiftRegressionTests": 15,
+  "integrationChecksPassed": 34,
+  "lspStability": {
+    "runs": 3,
+    "testsPerRun": 5,
+    "staleHelpers": 0
+  },
+  "issues": [
+    {
+      "issue": "CFG condition omission",
+      "status": "passed",
+      "regression": "whileConditionsHaveOrderedTrueAndFalsePaths"
+    },
+    {
+      "issue": "Deletion retains supplemented callable",
+      "status": "passed",
+      "regression": "failedAndDeletedSourcesInvalidateSupplementOwners; upgradeReconcilesUnchangedInputsWithLegacyGhostCFG"
+    },
+    {
+      "issue": "Blocking provider IO/shutdown",
+      "status": "passed",
+      "regression": "LSPProcessTests; review-regressions.py provider timeout and daemon shutdown"
+    },
+    {
+      "issue": "Import poisons live generation",
+      "status": "passed",
+      "regression": "importedGenerationsDoNotChangeLivePublicationOrRetention; importIntoEmptyStoreDoesNotBecomeLiveHead; legacyCacheMigrationPreservesLiveSnapshotAndMarksNewFormat"
+    },
+    {
+      "issue": "CFG ignores pinned snapshot",
+      "status": "passed",
+      "regression": "historicalCFGNeverReconcilesOrSubstitutesLiveInputs; obsoleteRecordedCFGIsRejectedWithoutReplacingPinnedData; real MCP pinned CFG"
+    },
+    {
+      "issue": "Session cookie collision",
+      "status": "passed",
+      "regression": "web-integration.py shared cookie jar, both WS upgrades, foreign-helper denial"
+    },
+    {
+      "issue": "Incoming path direction",
+      "status": "passed",
+      "regression": "pathRespectsDirectionDepthAndIdentity; daemon incoming path"
+    },
+    {
+      "issue": "Duplicated overview relation",
+      "status": "passed",
+      "regression": "overviewCountsEachSourceFactExactlyOnce; daemon overview"
+    }
+  ],
+  "sourceSHA256": {
+    "Sources/ArchitectureFrontend/ControlFlow/ControlFlowProvider.swift": "63d838d2f03f71642cfa40748a26a4a8badfac132c98314cb1ceb256442897e8",
+    "Sources/ArchitectureFrontend/Semantic/LSPProcess.swift": "b692a29dc12028a59829d151efc55e5a1e9387ba42d38c6d368aa2460bafefc7",
+    "Sources/ArchitectureGraph/Query/GraphEngine.swift": "cc7ba90ccbbdb6fe4d7ce1b702f59b32a064f449325406bc656bef179b903091",
+    "Sources/ArchitectureIndexer/Indexing/WorkspaceIndexer.swift": "eb4727d62eba606ba5ad67e0f2007924ce8e466b086fd5f62b0224169425df63",
+    "Sources/ArchitectureIndexer/Indexing/WorkspaceScanner.swift": "402639a8ed7d3c257357d18c9317dbea13582893d8ba9b07a7537b8e9c0a9210",
+    "Sources/ArchitectureService/Requests/ArchitectureService.swift": "b3313756225d7b7dc3383c3434b792d74cf5f55a75a82d24ea0092909c8daa11",
+    "Sources/ArchitectureStore/Persistence/SQLiteGraphStore.swift": "5583ac5ad07a7b95971e9d4e1f1c53100cb2425779a8bac54ccd862df0830e2c",
+    "Sources/ArchitectureStore/Persistence/GraphStore.swift": "24023770e4a16b0ff6dcbca3673fb5ad9ab4f1772b5171b13137b50a5788d035",
+    "Apps/ArchitectureExplorerWeb/Sources/ArchitectureServer/ExplorerApp.swift": "a1793a7cd4c9544cfbd9b3a067752195d9d2696decda18a05f45bc84c5c368e2",
+    "Apps/ArchitectureExplorerWeb/Sources/ArchitectureServer/Session/SessionAuthority.swift": "1f951804580ea903edb95611186bb636d168f5bbd2fa9392fe6c1fd5dca4e46e",
+    "Tests/ArchitectureTests/ReviewRegressionTests.swift": "5e49fc2367c5952be9989afd3d0ddf5e906c6a8a7dd4ae3995f564e6fc94441c",
+    "Tests/ArchitectureTests/LSPProcessTests.swift": "fc4eddde515e20c0331e3fec05ffd95b51c81fa2d43da248bb6d276bf2151699",
+    "Tests/ArchitectureTests/Fixtures/lsp-provider.py": "d5c687c3a1d11a1bd8820d92aab594267d2926eac5101152dab2675f56cd54f2"
+  },
+  "performanceTargets": {
+    "queryP95Within200ms": true,
+    "updateP95Within1000ms": false
+  },
+  "remainingSPECWork": "PROGRESS.md",
+  "packagedPreview": {
+    "cacheVersion": "1.1",
+    "CFGAlgorithmVersion": "2.0",
+    "authenticated": true,
+    "workflow": "function list -> source inspector -> CFG; actual in-app browser"
+  },
+  "codeCommits": [
+    "fb44175",
+    "2b6a4a7",
+    "7d8724c",
+    "388b409"
+  ]
+}

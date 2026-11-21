@@ -1,0 +1,1 @@
+<scxml xmlns="http://www.w3.org/2005/07/scxml" version="1.0" initial="idle"><state id="idle"><transition event="begin" cond="ready" target="busy"/></state><state id="busy"><onentry><log expr="literal only"/></onentry><transition event="finish" target="done"/></state><final id="done"/></scxml>

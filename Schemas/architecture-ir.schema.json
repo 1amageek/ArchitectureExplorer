@@ -1,0 +1,609 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://architecture-explorer.local/schemas/architecture-ir.schema.json",
+  "$ref": "#/$defs/Snapshot",
+  "$defs": {
+    "Capability": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string"
+        },
+        "producer": {
+          "type": "string"
+        },
+        "feature": {
+          "type": "string"
+        },
+        "supported": {
+          "type": "boolean"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "language",
+        "producer",
+        "feature",
+        "supported",
+        "scope",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "Coverage": {
+      "type": "object",
+      "properties": {
+        "producer": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "freshness": {
+          "type": "string"
+        },
+        "completeness": {
+          "type": "string"
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Diagnostic"
+          }
+        }
+      },
+      "required": [
+        "producer",
+        "scope",
+        "language",
+        "freshness",
+        "completeness",
+        "exclusions",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    },
+    "Evidence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "producer": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "inputDigest": {
+          "type": "string"
+        },
+        "contextDigest": {
+          "type": "string"
+        },
+        "basis": {
+          "type": "string"
+        },
+        "freshness": {
+          "type": "string"
+        },
+        "anchor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceAnchor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Diagnostic"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "producer",
+        "version",
+        "inputDigest",
+        "contextDigest",
+        "basis",
+        "freshness",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    },
+    "SourceAnchor": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "digest": {
+          "type": "string"
+        },
+        "startByte": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "endByte": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "path",
+        "digest",
+        "startByte",
+        "endByte"
+      ],
+      "additionalProperties": false
+    },
+    "Snapshot": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "workspaceID": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "contextDigest": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Entity"
+          }
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Fact"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Coverage"
+          }
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Diagnostic"
+          }
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "workspaceID",
+        "generation",
+        "contextDigest",
+        "inputs",
+        "entities",
+        "facts",
+        "evidence",
+        "coverage",
+        "diagnostics",
+        "createdAt"
+      ],
+      "additionalProperties": false
+    },
+    "GraphView": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0"
+        },
+        "workspaceID": {
+          "type": "string"
+        },
+        "snapshotID": {
+          "type": "string"
+        },
+        "queryID": {
+          "type": "string"
+        },
+        "freshness": {
+          "type": "string"
+        },
+        "completeness": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Entity"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Fact"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Coverage"
+          }
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "nextCursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Diagnostic"
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "workspaceID",
+        "snapshotID",
+        "queryID",
+        "freshness",
+        "completeness",
+        "nodes",
+        "edges",
+        "evidence",
+        "coverage",
+        "truncated",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    },
+    "GraphQuery": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "snapshotID": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "focus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "direction": {
+          "type": "string"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "edgeLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "level": {
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "method",
+        "text",
+        "kinds",
+        "languages",
+        "direction",
+        "depth",
+        "limit",
+        "edgeLimit",
+        "level"
+      ],
+      "additionalProperties": false
+    },
+    "GraphDelta": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string"
+        },
+        "workspaceID": {
+          "type": "string"
+        },
+        "streamEpoch": {
+          "type": "string"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "queryID": {
+          "type": "string"
+        },
+        "baseSnapshotID": {
+          "type": "string"
+        },
+        "targetSnapshotID": {
+          "type": "string"
+        },
+        "upsertNodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Entity"
+          }
+        },
+        "removeNodeIDs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "upsertEdges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Fact"
+          }
+        },
+        "removeEdgeIDs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "coverageChanged": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "workspaceID",
+        "streamEpoch",
+        "sequence",
+        "queryID",
+        "baseSnapshotID",
+        "targetSnapshotID",
+        "upsertNodes",
+        "removeNodeIDs",
+        "upsertEdges",
+        "removeEdgeIDs",
+        "coverageChanged"
+      ],
+      "additionalProperties": false
+    },
+    "Entity": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "identityKey": {
+          "type": "string"
+        },
+        "entityRevision": {
+          "type": "string"
+        },
+        "anchor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceAnchor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "language",
+        "name",
+        "identityKey",
+        "entityRevision",
+        "attributes"
+      ],
+      "additionalProperties": false
+    },
+    "Fact": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "producer": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "evidenceIDs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "id",
+        "producer",
+        "scope",
+        "kind",
+        "source",
+        "target",
+        "revision",
+        "evidenceIDs",
+        "attributes"
+      ],
+      "additionalProperties": false
+    },
+    "Diagnostic": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "recovery": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "phase",
+        "scope",
+        "message",
+        "recovery"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

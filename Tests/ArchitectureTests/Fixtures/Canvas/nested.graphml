@@ -1,0 +1,1 @@
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"><key id="label" for="node" attr.name="label" attr.type="string"/><graph id="G" edgedefault="directed"><node id="host"><data key="label">Host</data><graph id="inner" edgedefault="directed"><node id="a"><data key="label">Source</data></node><node id="b"/><edge id="ab" source="a" target="b"/></graph></node></graph></graphml>

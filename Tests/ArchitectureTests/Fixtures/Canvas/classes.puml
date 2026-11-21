@@ -1,0 +1,8 @@
+@startuml
+class Repository {
+ +count: Int
+ +load(): Value
+}
+interface Reading
+Repository ..|> Reading
+@enduml

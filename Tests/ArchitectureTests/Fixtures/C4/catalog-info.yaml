@@ -1,0 +1,42 @@
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata: {name: commerce}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata: {name: reservations}
+spec: {subdomainOf: commerce}
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata: {name: booking, title: Booking}
+spec: {domain: reservations}
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata: {name: partner, title: Partner}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata: {name: agent}
+spec: {type: service, system: partner, dependsOn: ['component:backend']}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata: {name: browser, title: Browser UI}
+spec: {type: website, system: booking, dependsOn: ['component:backend']}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata: {name: backend, title: Booking application}
+spec: {type: service, system: booking, dependsOn: ['resource:database']}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata: {name: database, title: Booking database}
+spec: {type: database, system: booking}
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata: {name: booking-library}
+spec: {type: library, system: booking}

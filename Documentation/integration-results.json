@@ -1,0 +1,19 @@
+{
+  "client": "Python standard-library JSON-RPC MCP client",
+  "protocolVersion": "2025-11-25",
+  "checks": [
+    "four simultaneous launches share one daemon identity",
+    "untrusted manifest never executes",
+    "fifty abandoned IPC connections do not terminate the shared daemon",
+    "snapshot-fixed search pages have no duplicates",
+    "on-demand CFG reaches real control-flow blocks",
+    "saved edit publishes a new snapshot, preserves callable ID and produces diff",
+    "parse failure retains stale last-known-good instead of empty success",
+    "confirmed deletion removes old entities",
+    "all four exports use real snapshots and refuse overwrite",
+    "CLI completeness, budget and argument failures have typed exit codes",
+    "MCP initialize/list/query/cancel/EOF shutdown uses shared daemon and bounded protocol stdout",
+    "restart reconciles disk and preserves committed snapshot"
+  ],
+  "passed": 12
+}

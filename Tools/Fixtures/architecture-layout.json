@@ -1,0 +1,486 @@
+{
+  "nodes": [
+    {
+      "id": "ae-b1a2e8e9f38cde6c91ce3ee055a704828da7cbf281d0cb5b9ceb97d2dc6ab8a3",
+      "kind": "package",
+      "name": "Apps/ArchitectureExplorerWeb",
+      "language": "swift"
+    },
+    {
+      "id": "ae-62a3e406391faf023283ba89ba58eb42e3413201651d857fad182fb4c60bac28",
+      "kind": "module",
+      "name": "ArchitectureClient",
+      "language": "swift"
+    },
+    {
+      "id": "ae-866d0d3c741795c13f5c34c9e89feaf36f81fc140bef4d43e83a52e271c2b5ac",
+      "kind": "module",
+      "name": "ArchitectureCore",
+      "language": "swift"
+    },
+    {
+      "id": "ae-4708f4e6111acb2600495b324c2d8c036f0d3e5c783cb906937eaa1a56f3deac",
+      "kind": "workspace",
+      "name": "ArchitectureExplorer",
+      "language": "none"
+    },
+    {
+      "id": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "kind": "package",
+      "name": "ArchitectureExplorer",
+      "language": "swift"
+    },
+    {
+      "id": "ae-641874da60227ca7b1e19ded519e17eb292fda2ad2de6a16f8c0ccf33737934d",
+      "kind": "module",
+      "name": "ArchitectureFrontend",
+      "language": "swift"
+    },
+    {
+      "id": "ae-06c8a8aca7cd10d3c59546cde6bea78d66ee20ac9782bdccf05ef04887305575",
+      "kind": "module",
+      "name": "ArchitectureGraph",
+      "language": "swift"
+    },
+    {
+      "id": "ae-d9251746666660c7ddba0668f054873bcc072df0e228d8b9053a30a379140936",
+      "kind": "module",
+      "name": "ArchitectureHTTPHost",
+      "language": "swift"
+    },
+    {
+      "id": "ae-a57a5e3d828a4830861e7a9c0e1bb9beadefb33127e18acdb2a20c28b6280ec1",
+      "kind": "module",
+      "name": "ArchitectureIR",
+      "language": "swift"
+    },
+    {
+      "id": "ae-ba5be2ac763f787c47881c3888edc5701fee5aa1eeec2d3501e56b3d92dc33a8",
+      "kind": "module",
+      "name": "ArchitectureIndexer",
+      "language": "swift"
+    },
+    {
+      "id": "ae-937b17a0b33c0890e2e4709848f27e8cb2301945cf0b5d15a9772a58d9e7acb3",
+      "kind": "module",
+      "name": "ArchitectureMCP",
+      "language": "swift"
+    },
+    {
+      "id": "ae-c46fbc67ad70f664639fb0fe2c2f20c68f8110d32b86e7055b8f99cb43b83eb8",
+      "kind": "module",
+      "name": "ArchitectureServer",
+      "language": "swift"
+    },
+    {
+      "id": "ae-aded0b9b3d05d5b166e117062d2dee7a4634ae5f017a13b995e9374bbdb7e80a",
+      "kind": "module",
+      "name": "ArchitectureService",
+      "language": "swift"
+    },
+    {
+      "id": "ae-fc3030a450b60feaa49466a46af525ceb45d3117b130dce5a5c4c6b2a7f21768",
+      "kind": "module",
+      "name": "ArchitectureStore",
+      "language": "swift"
+    },
+    {
+      "id": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "kind": "module",
+      "name": "ArchitectureTests",
+      "language": "swift"
+    },
+    {
+      "id": "ae-2f1b939eb32ed6167563a9cc93c0ae865e290dd19ac7a4b0afab4d0c9b718966",
+      "kind": "module",
+      "name": "ArchitectureWeb",
+      "language": "swift"
+    },
+    {
+      "id": "ae-40817ed088a3f0293649bcd5f3e0f6bfd61439af9065fc464f579587621e3166",
+      "kind": "module",
+      "name": "CArchitectureSignals",
+      "language": "none"
+    },
+    {
+      "id": "ae-1fd1dd97006a40dd169ec0d9c3af2834655d822d6859df4b71d314db5cb6d82e",
+      "kind": "module",
+      "name": "CArchitectureSyntax",
+      "language": "none"
+    },
+    {
+      "id": "ae-34a9cf581534d2ff0f4be09a286098ec0c9ef063b84e7426122ef6de53fda7fd",
+      "kind": "module",
+      "name": "CSQLite",
+      "language": "none"
+    },
+    {
+      "id": "ae-fb7cbe8270df07de2cf561ed64671ca0d4600aabe6db89e15519217262b05af8",
+      "kind": "module",
+      "name": "Example",
+      "language": "swift"
+    },
+    {
+      "id": "ae-47d582e886ce8f2c12daa8658b3c7727fdc6fd4a0a6115fe09664e0f597ebea8",
+      "kind": "package",
+      "name": "Fixtures/Projects/RustWorkspace",
+      "language": "rust"
+    },
+    {
+      "id": "ae-3a60c0e46a8c53e83964bf025baacc7039f5c9ea716a24e36c0f15adabe8a711",
+      "kind": "package",
+      "name": "Fixtures/Projects/SwiftWorkspace",
+      "language": "swift"
+    },
+    {
+      "id": "ae-7b7f5d0bf80195389f696e87f4bf81038580617c2ca8735af0085fe4e9d64576",
+      "kind": "module",
+      "name": "architecture",
+      "language": "swift"
+    },
+    {
+      "id": "ae-539c47c4122ff5eae95fe99139e2f3af88eafa3a4b9eb51b43ae50cfe798b9f8",
+      "kind": "module",
+      "name": "architecture-web",
+      "language": "swift"
+    },
+    {
+      "id": "ae-5674a212109f63c05bf84e3b8f380e2768d133902ab27640d7f94ab4036f2f0e",
+      "kind": "module",
+      "name": "architecture_fixture",
+      "language": "rust"
+    }
+  ],
+  "edges": [
+    {
+      "id": "ae-0020559597f5790a4658e4fe9bcacfcc2f364e8fc214781ff31f2cd632a77f80",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-fc3030a450b60feaa49466a46af525ceb45d3117b130dce5a5c4c6b2a7f21768",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-0376707a028735a87f86529b8b596e328ffd21ac76566634a3ae3745b6999fc4",
+      "source": "ae-4708f4e6111acb2600495b324c2d8c036f0d3e5c783cb906937eaa1a56f3deac",
+      "target": "ae-47d582e886ce8f2c12daa8658b3c7727fdc6fd4a0a6115fe09664e0f597ebea8",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-0737dd438be913a0798c219cdd2bb2d5422e3a6473890d14f983c82c12f6cebf",
+      "source": "ae-06c8a8aca7cd10d3c59546cde6bea78d66ee20ac9782bdccf05ef04887305575",
+      "target": "ae-a57a5e3d828a4830861e7a9c0e1bb9beadefb33127e18acdb2a20c28b6280ec1",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-0aabef1f76b47e5c8aedbeb7950ab8dbbd7b28ec9abe20b25e245d959dddbe61",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-ba5be2ac763f787c47881c3888edc5701fee5aa1eeec2d3501e56b3d92dc33a8",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-135e7ff012464adf504bf9b85791a9536be76e5caaa532e55a16b524b252e798",
+      "source": "ae-866d0d3c741795c13f5c34c9e89feaf36f81fc140bef4d43e83a52e271c2b5ac",
+      "target": "ae-40817ed088a3f0293649bcd5f3e0f6bfd61439af9065fc464f579587621e3166",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-138d078a35d51306d9b2d42b7f4a160d7e5b5a658923e6dad9498cc08552d2c5",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-fc3030a450b60feaa49466a46af525ceb45d3117b130dce5a5c4c6b2a7f21768",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-14bf43e75dd551d072837a3a82f56398a5df60ebe7069fdd62cdc3f03b504f4e",
+      "source": "ae-47d582e886ce8f2c12daa8658b3c7727fdc6fd4a0a6115fe09664e0f597ebea8",
+      "target": "ae-5674a212109f63c05bf84e3b8f380e2768d133902ab27640d7f94ab4036f2f0e",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-14d3f7802db98cec8cac9c2e79ff138325768225d734d80c030cae0cd1ddf905",
+      "source": "ae-b1a2e8e9f38cde6c91ce3ee055a704828da7cbf281d0cb5b9ceb97d2dc6ab8a3",
+      "target": "ae-539c47c4122ff5eae95fe99139e2f3af88eafa3a4b9eb51b43ae50cfe798b9f8",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-18ef131d7c5604f7bffe22f2fb1349fa834c64458e92ccea24e260eaca35fce9",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-866d0d3c741795c13f5c34c9e89feaf36f81fc140bef4d43e83a52e271c2b5ac",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-1abc2e08bf4aaddcc60f78ddea171ccb2984c763be3d6acd464d793078555cf9",
+      "source": "ae-a57a5e3d828a4830861e7a9c0e1bb9beadefb33127e18acdb2a20c28b6280ec1",
+      "target": "ae-866d0d3c741795c13f5c34c9e89feaf36f81fc140bef4d43e83a52e271c2b5ac",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-1d2ede5982b002dcb08a33fc684cd61f1874083bf3e0d433931df75b9c488e9c",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-62a3e406391faf023283ba89ba58eb42e3413201651d857fad182fb4c60bac28",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-258f049ee884d49d6272f6ca9f2637605d2f0454ebc03abec96b08d96f378293",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-aded0b9b3d05d5b166e117062d2dee7a4634ae5f017a13b995e9374bbdb7e80a",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-2bb9ad6adc9daf90fe8805e99c69f1631a6f1fe1e0ca1b146898d9c0af0c0c10",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-937b17a0b33c0890e2e4709848f27e8cb2301945cf0b5d15a9772a58d9e7acb3",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-328615a78a64b841c33bd53b3e34388f337503ff39e1dd90f562dd8cc8b5da84",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-62a3e406391faf023283ba89ba58eb42e3413201651d857fad182fb4c60bac28",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-34e8ee814bcd723c913df2659244dced9f54d481f544ef54e1a40b62a8dfafca",
+      "source": "ae-7b7f5d0bf80195389f696e87f4bf81038580617c2ca8735af0085fe4e9d64576",
+      "target": "ae-aded0b9b3d05d5b166e117062d2dee7a4634ae5f017a13b995e9374bbdb7e80a",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-409528697e60c9fa38e77bed9ded0c2e65195448a34927aecdec6a056cd5833d",
+      "source": "ae-aded0b9b3d05d5b166e117062d2dee7a4634ae5f017a13b995e9374bbdb7e80a",
+      "target": "ae-ba5be2ac763f787c47881c3888edc5701fee5aa1eeec2d3501e56b3d92dc33a8",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-4349246801ceaac8564c447bce4d232fb9b5b4183c54eac6ee3b33e6b643f376",
+      "source": "ae-937b17a0b33c0890e2e4709848f27e8cb2301945cf0b5d15a9772a58d9e7acb3",
+      "target": "ae-62a3e406391faf023283ba89ba58eb42e3413201651d857fad182fb4c60bac28",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-436a2a8ac623c0170919594b3b71a27ae779a43724948052182f7e9e6b889834",
+      "source": "ae-4708f4e6111acb2600495b324c2d8c036f0d3e5c783cb906937eaa1a56f3deac",
+      "target": "ae-b1a2e8e9f38cde6c91ce3ee055a704828da7cbf281d0cb5b9ceb97d2dc6ab8a3",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-5841829206f83a1830e899f960e24914af956c6238928933991decf6ca5d19b7",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-06c8a8aca7cd10d3c59546cde6bea78d66ee20ac9782bdccf05ef04887305575",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-61d1597583e1c5ec6c5c2bf251ebecfcf4d58ba15b6ce7931699ed7ad995c345",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-a57a5e3d828a4830861e7a9c0e1bb9beadefb33127e18acdb2a20c28b6280ec1",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-66fd3b118d5b5d2b166fd207480b40db1d39c7390d2bf8c20454c7b3d84e214b",
+      "source": "ae-b1a2e8e9f38cde6c91ce3ee055a704828da7cbf281d0cb5b9ceb97d2dc6ab8a3",
+      "target": "ae-c46fbc67ad70f664639fb0fe2c2f20c68f8110d32b86e7055b8f99cb43b83eb8",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-6ba1240eccca736f7046eb4b1143f6e4b74b08c4b9b8398b7592d51163824f42",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-641874da60227ca7b1e19ded519e17eb292fda2ad2de6a16f8c0ccf33737934d",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-725607c40bc173c4c3ffaae1753ce7c924575b97c3e2b4634165bf682e328727",
+      "source": "ae-7b7f5d0bf80195389f696e87f4bf81038580617c2ca8735af0085fe4e9d64576",
+      "target": "ae-937b17a0b33c0890e2e4709848f27e8cb2301945cf0b5d15a9772a58d9e7acb3",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-734bfb0cfa2952008cda138c4ffde5c4100deac86ccc00e43b2164754b425a11",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-06c8a8aca7cd10d3c59546cde6bea78d66ee20ac9782bdccf05ef04887305575",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-793aa1bf7ec51baca6d60862aea26d3f017a25a79276651e02d50a653581504c",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-aded0b9b3d05d5b166e117062d2dee7a4634ae5f017a13b995e9374bbdb7e80a",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-7f958f8eef25590916f82de9d56777192d8cc94484da26e457c6eb8609b2333b",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-641874da60227ca7b1e19ded519e17eb292fda2ad2de6a16f8c0ccf33737934d",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-8177832b493735e10fe99d54f7412a767f2a821cdf5c7f456a54c6061dc794aa",
+      "source": "ae-fc3030a450b60feaa49466a46af525ceb45d3117b130dce5a5c4c6b2a7f21768",
+      "target": "ae-34a9cf581534d2ff0f4be09a286098ec0c9ef063b84e7426122ef6de53fda7fd",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-860f53c8396bb26ec128ce41e4277507bfe180ba822f8464256d32b5f93e3a29",
+      "source": "ae-7b7f5d0bf80195389f696e87f4bf81038580617c2ca8735af0085fe4e9d64576",
+      "target": "ae-641874da60227ca7b1e19ded519e17eb292fda2ad2de6a16f8c0ccf33737934d",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-8cf6f42699e3366b83389d53c566e03f876e2e4f63c4e22041f9ec583d8ba9d7",
+      "source": "ae-4708f4e6111acb2600495b324c2d8c036f0d3e5c783cb906937eaa1a56f3deac",
+      "target": "ae-3a60c0e46a8c53e83964bf025baacc7039f5c9ea716a24e36c0f15adabe8a711",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-936ff234933a1fdf5cbda9cea81772711ef4b62244dcd163edbe5f64bf7390ef",
+      "source": "ae-ba5be2ac763f787c47881c3888edc5701fee5aa1eeec2d3501e56b3d92dc33a8",
+      "target": "ae-fc3030a450b60feaa49466a46af525ceb45d3117b130dce5a5c4c6b2a7f21768",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-96fae47f06680c00cd3a9595311ca11ad81045e81a7548313918aa1eb57df8ac",
+      "source": "ae-7b7f5d0bf80195389f696e87f4bf81038580617c2ca8735af0085fe4e9d64576",
+      "target": "ae-62a3e406391faf023283ba89ba58eb42e3413201651d857fad182fb4c60bac28",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-9a3818a95539cdd902094f4300327e99deaa5f3e85e0a1dd4544675f8adb79f5",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-7b7f5d0bf80195389f696e87f4bf81038580617c2ca8735af0085fe4e9d64576",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-a1c18c5cc98589effa99b687a48cfd9fafe1ed3c179bff248ff33064d36b98a3",
+      "source": "ae-ba5be2ac763f787c47881c3888edc5701fee5aa1eeec2d3501e56b3d92dc33a8",
+      "target": "ae-641874da60227ca7b1e19ded519e17eb292fda2ad2de6a16f8c0ccf33737934d",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-a2b2232cfe871cd1dc872d6031b46a4148e025355084eff649864a5f00cff9bf",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-40817ed088a3f0293649bcd5f3e0f6bfd61439af9065fc464f579587621e3166",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-a479bc26d44c0927d6a9805028a03afce65b06ff669d87eba13c97562d6ee79e",
+      "source": "ae-b1a2e8e9f38cde6c91ce3ee055a704828da7cbf281d0cb5b9ceb97d2dc6ab8a3",
+      "target": "ae-2f1b939eb32ed6167563a9cc93c0ae865e290dd19ac7a4b0afab4d0c9b718966",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-a7f8d5b6b5c260775e34bf62d6943ecce2b210ef67234009ef188fe5c8ac9a8e",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-1fd1dd97006a40dd169ec0d9c3af2834655d822d6859df4b71d314db5cb6d82e",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-b0b69b727c79a1c80fb28a3757ed2e99ae9bf6c708c119b46649d33bd96cf934",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-937b17a0b33c0890e2e4709848f27e8cb2301945cf0b5d15a9772a58d9e7acb3",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-b18032d03332d0cf858a4ff4aa1757bf10511942cfbfe045cc11f02c70051573",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-a57a5e3d828a4830861e7a9c0e1bb9beadefb33127e18acdb2a20c28b6280ec1",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-b59b18f8e2b485f1ba79f3a9d256a45cc13a5a1d2c3e897da750ecba56c776e2",
+      "source": "ae-3a60c0e46a8c53e83964bf025baacc7039f5c9ea716a24e36c0f15adabe8a711",
+      "target": "ae-fb7cbe8270df07de2cf561ed64671ca0d4600aabe6db89e15519217262b05af8",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-bb9819327f19aa745132cb88774adefb45ba66ceb1c9e6c09a38527a67b1883c",
+      "source": "ae-641874da60227ca7b1e19ded519e17eb292fda2ad2de6a16f8c0ccf33737934d",
+      "target": "ae-1fd1dd97006a40dd169ec0d9c3af2834655d822d6859df4b71d314db5cb6d82e",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-bfa8690cafff350f581cf42265fbdfdd1c4a60eca4753e195ccd711c4359da7c",
+      "source": "ae-7b7f5d0bf80195389f696e87f4bf81038580617c2ca8735af0085fe4e9d64576",
+      "target": "ae-06c8a8aca7cd10d3c59546cde6bea78d66ee20ac9782bdccf05ef04887305575",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-c3bc8bb5b96ee587350d60d0666393e9b2f9bccdefb56129dab2213d54a1abf5",
+      "source": "ae-b1a2e8e9f38cde6c91ce3ee055a704828da7cbf281d0cb5b9ceb97d2dc6ab8a3",
+      "target": "ae-d9251746666660c7ddba0668f054873bcc072df0e228d8b9053a30a379140936",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-c87dc4fa58610efbabb43898e346cfb6a12d4119f2795274287cd61f1f98b1eb",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-34a9cf581534d2ff0f4be09a286098ec0c9ef063b84e7426122ef6de53fda7fd",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-c8cfaa22a1d09648bcf67bdaae61718506b1ff3856f27bf65c6e4c9c69783b76",
+      "source": "ae-c46fbc67ad70f664639fb0fe2c2f20c68f8110d32b86e7055b8f99cb43b83eb8",
+      "target": "ae-d9251746666660c7ddba0668f054873bcc072df0e228d8b9053a30a379140936",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-c98a289011c492d0d3aa2cc3f882319e59509cdb6a4fc441caca26ae82ed5fdd",
+      "source": "ae-539c47c4122ff5eae95fe99139e2f3af88eafa3a4b9eb51b43ae50cfe798b9f8",
+      "target": "ae-c46fbc67ad70f664639fb0fe2c2f20c68f8110d32b86e7055b8f99cb43b83eb8",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-d72a44d5905b4a03a1b62b98e475d34a30bf86b4c46e779619651c5b8363f679",
+      "source": "ae-641874da60227ca7b1e19ded519e17eb292fda2ad2de6a16f8c0ccf33737934d",
+      "target": "ae-a57a5e3d828a4830861e7a9c0e1bb9beadefb33127e18acdb2a20c28b6280ec1",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-d7a4e2f46ce56871599accf2270d7ff1a04aac37c17c89ef64cca3caefa70ef5",
+      "source": "ae-62a3e406391faf023283ba89ba58eb42e3413201651d857fad182fb4c60bac28",
+      "target": "ae-a57a5e3d828a4830861e7a9c0e1bb9beadefb33127e18acdb2a20c28b6280ec1",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-d7caefce2d724810d45e2d7c14b09510ca733863e7325066d465f98c4d5766d1",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-eb08ee5325f18ee469cadb6f52e41677cf3546ffb8d063d6e9526bd232456bbc",
+      "source": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "target": "ae-866d0d3c741795c13f5c34c9e89feaf36f81fc140bef4d43e83a52e271c2b5ac",
+      "kind": "contains"
+    },
+    {
+      "id": "ae-f54daa0023924cb56652bb29e9a7a610ec33b1d074b614a188dc70c107db532e",
+      "source": "ae-c46fbc67ad70f664639fb0fe2c2f20c68f8110d32b86e7055b8f99cb43b83eb8",
+      "target": "ae-2f1b939eb32ed6167563a9cc93c0ae865e290dd19ac7a4b0afab4d0c9b718966",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-f5fab53bfd97d10b95a35044e4ab5be5fc9a089778f42e6f48b85ceb3985eef9",
+      "source": "ae-fc3030a450b60feaa49466a46af525ceb45d3117b130dce5a5c4c6b2a7f21768",
+      "target": "ae-a57a5e3d828a4830861e7a9c0e1bb9beadefb33127e18acdb2a20c28b6280ec1",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-f72d06d304b33fc505b5825eb57357d8efa466783d81d7ca0faf9ec0e876d456",
+      "source": "ae-7b7f5d0bf80195389f696e87f4bf81038580617c2ca8735af0085fe4e9d64576",
+      "target": "ae-fc3030a450b60feaa49466a46af525ceb45d3117b130dce5a5c4c6b2a7f21768",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-fae06c98a851b55bdddcb33b59279683fc30461649fdb4d3164f5c536348339c",
+      "source": "ae-a137927045ae9b8f55c665e1754b6d9883ff9f5236ac8c089c6f2d696b20a898",
+      "target": "ae-ba5be2ac763f787c47881c3888edc5701fee5aa1eeec2d3501e56b3d92dc33a8",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-fb8caaec4b9df3b89550834cac5313d943aaef83dc0b85702c20e401a47c0ebd",
+      "source": "ae-aded0b9b3d05d5b166e117062d2dee7a4634ae5f017a13b995e9374bbdb7e80a",
+      "target": "ae-06c8a8aca7cd10d3c59546cde6bea78d66ee20ac9782bdccf05ef04887305575",
+      "kind": "dependsOn"
+    },
+    {
+      "id": "ae-fc4d85b27a91b5f6bab6ba70d9b7b3dcc76c5ebd339af6b0ff920b01fdbfcb83",
+      "source": "ae-4708f4e6111acb2600495b324c2d8c036f0d3e5c783cb906937eaa1a56f3deac",
+      "target": "ae-651f6ad6fa3ab5c7257c193d98cca350882bd53d2716647dd04c399a954d05ca",
+      "kind": "contains"
+    }
+  ]
+}

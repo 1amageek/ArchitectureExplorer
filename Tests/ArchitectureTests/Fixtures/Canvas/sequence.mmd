@@ -1,0 +1,8 @@
+sequenceDiagram
+participant Client
+participant Worker as Background worker
+Client->>Worker: begin
+loop until complete
+Worker-->>Client: progress
+end
+Worker-->>Client: done

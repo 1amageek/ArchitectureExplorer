@@ -1,0 +1,6 @@
+stateDiagram-v2
+[*] --> Idle
+state "Working" as Busy
+Idle --> Busy: start [ready]
+Busy --> Busy: tick
+Busy --> [*]: finish

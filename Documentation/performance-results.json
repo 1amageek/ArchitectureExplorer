@@ -1,0 +1,51 @@
+{
+  "host": {
+    "os": "macOS-27.2.1-arm64-arm-64bit",
+    "architecture": "arm64",
+    "memoryBytes": 38654705664,
+    "swift": "6.4.1"
+  },
+  "fixture": {
+    "files": 1000,
+    "linesPerFile": 101,
+    "entities": 12002,
+    "edges": 22000
+  },
+  "conditions": {
+    "build": "release",
+    "cold": "fresh workspace/cache; daemon launch and normal 250 ms progress observation included",
+    "warm": "same daemon, exact-byte hashing, 250 ms reconciliation and SQLite FULL publication enabled",
+    "query": "100 visible function nodes via Unix API; CLI query timings reported separately",
+    "updates": "saved bytes to normal published snapshot; input scans/parse/validation/commit included; 50 ms status observation",
+    "memory": "one ps RSS observation after all cycles, not a peak or GPU allocation"
+  },
+  "daemonReadyMilliseconds": 405.02270800061524,
+  "indexingStatusLatency": {
+    "count": 6,
+    "p50Milliseconds": 4.843917005928233,
+    "p95Milliseconds": 241.4227079716511
+  },
+  "maximumScheduledWorkersObserved": 4,
+  "coldIndexMilliseconds": 2200.3351250314154,
+  "warmQuery": {
+    "count": 20,
+    "p50Milliseconds": 118.6058335006237,
+    "p95Milliseconds": 165.762624994386
+  },
+  "cliQuery": {
+    "count": 20,
+    "p50Milliseconds": 157.46779151959345,
+    "p95Milliseconds": 174.40474999602884
+  },
+  "savedFileUpdate": {
+    "count": 10,
+    "p50Milliseconds": 1128.777062491281,
+    "p95Milliseconds": 1425.7326670340262
+  },
+  "maximumQueryResponseBytes": 152195,
+  "finalDaemonRSSKiB": 248112,
+  "targets": {
+    "queryP95Within200ms": true,
+    "updateP95Within1000ms": false
+  }
+}

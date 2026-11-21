@@ -1,0 +1,6 @@
+@startuml
+participant "Client" as C
+participant "Worker" as W
+C -> W : request
+W --> C : response
+@enduml

@@ -1,0 +1,2 @@
+digraph CFG { entry [shape=oval]; check [shape=diamond,label="x > 0"]; body [label="work"]; exit;
+ entry -> check; check -> body [label="true"]; body -> check; check -> exit [label="false"]; }

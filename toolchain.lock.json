@@ -1,0 +1,7 @@
+{
+  "swift": "6.4.1",
+  "tag": "swift-6.4.1-RELEASE",
+  "target": "arm64-apple-macosx27.0",
+  "verifiedHost": "macOS 27.2.1",
+  "minimumOS": "macOS 27.0"
+}
