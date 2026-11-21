@@ -135,15 +135,21 @@ extension SystemContextTests {
             }
             group "Platform" {
                 service = softwareSystem "Service" {
-                    // Entry: type 0..<\(body.count) sha256=\(CanonicalJSON.digest(body)) Runner.swift
-                    // Source: Sources/Job.swift:12 sha256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-                    // Source: config.json sha256=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-                    job = container "Job" "Processes work" "Swift" "worker"
+                    group "App" {
+                        client = container "Client"
+                    }
+                    group "Backend" {
+                        // Entry: type 0..<\(body.count) sha256=\(CanonicalJSON.digest(body)) Runner.swift
+                        // Source: Sources/Job.swift:12 sha256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                        // Source: config.json sha256=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+                        job = container "Job" "Processes work" "Swift" "worker"
+                    }
                 }
                 other = softwareSystem "Unconnected"
             }
             actor -> service "Operates"
-            actor -> job "Starts"
+            actor -> client "Operates"
+            client -> job "Starts"
         }
         views {
             systemContext service Context {
@@ -167,12 +173,19 @@ extension SystemContextTests {
     #expect(subject.attributes["context.areas"]?.array.first?["name"].string == "Platform")
     #expect(c1.edges.count == 1 && c1.edges.first?.target == subject.id)
     let c2 = try engine.view(GraphQuery(method: "graph.overview", focus: subject.id, level: "container"), snapshot: snapshot)
+    let client = try #require(c2.nodes.first { $0.name == "Client" })
     let job = try #require(c2.nodes.first { $0.name == "Job" })
     #expect(job.attributes["context.citedSources"]?.array.first?["path"].string == "Sources/Job.swift")
     #expect(job.attributes["context.citedSources"]?.array.first?["line"] == .number(12))
     #expect(subject.attributes["context.citedSources"] == nil)
-    #expect(c2.edges.count == 1 && c2.edges.first?.source == actor.id)
-    #expect(c2.nodes.first { $0.id == c2.edges.first?.target }?.name == "Job")
+    #expect(Set(c2.edges.map { [$0.source, $0.target] }) == [[actor.id, client.id], [client.id, job.id]])
+    #expect(client.attributes["context.owner"]?.string == subject.id)
+    #expect(job.attributes["context.owner"]?.string == subject.id)
+    let app = try #require(client.attributes["context.containerGroup"])
+    let backend = try #require(job.attributes["context.containerGroup"])
+    #expect(app["name"].string == "App" && backend["name"].string == "Backend")
+    #expect(app["id"].string != backend["id"].string)
+    #expect(c1.nodes.allSatisfy { $0.attributes["context.containerGroup"] == nil })
     #expect(c2.evidence.contains { $0.anchor?.path == "ARCHITECTURE.dsl" })
     #expect(c2.nodes.first { $0.name == "Job" }?.attributes["context.areas"] == subject.attributes["context.areas"])
     let entry = try #require(job.attributes["context.entryID"]?.string)
@@ -194,6 +207,10 @@ extension SystemContextTests {
     try Data(unwrapped.utf8).write(to: file)
     let ungrouped = try engine.view(query, snapshot: await indexer.reconcile())
     #expect(ungrouped.nodes.isEmpty && ungrouped.diagnostics.contains { $0.message.contains("domain group") })
+    let duplicate = model.replacingOccurrences(of: "group \"Backend\"", with: "group \"App\"")
+    try Data(duplicate.utf8).write(to: file)
+    let ambiguous = try engine.view(query, snapshot: await indexer.reconcile())
+    #expect(ambiguous.nodes.isEmpty && ambiguous.diagnostics.contains { $0.message.contains("container group") })
     try Data(model.replacingOccurrences(of: "include *", with: "!include remote.dsl").utf8).write(to: file)
     let failed = try engine.view(query, snapshot: await indexer.reconcile())
     #expect(failed.nodes.isEmpty && failed.diagnostics.contains { $0.code == "C4_DSL_INVALID" })

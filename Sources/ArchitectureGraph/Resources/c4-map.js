@@ -94,7 +94,8 @@ globalThis.C4Map = class {
       else {g.setAttribute('role','group');g.setAttribute('tabindex','0');}
       const outline=svg('path',{class:'c4-boundary','pointer-events':'none'},g);
       const segments=[2,1].map(i=>({a:points[i],b:points[i+1]}));
-      label(item.id,item.name,'area-label',()=>{if(node)actions.node(node);},{corners:points,outline,segments},node);
+      label(item.id,item.name,'area-label',()=>{if(node)actions.node(node);},
+        {corners:points,outline,segments,containerGroup:item.containerGroup},node);
     }
     for(const {edge,points} of plan.paths){
       const projected=points.map(p=>project(...p));
@@ -142,7 +143,7 @@ globalThis.C4Map = class {
     }
     // Measure once at screen font size. Pan only moves the camera; zoom changes the available space.
     const priority={'object-label':0,'area-label':1,'edge-label':2};
-    candidates.sort((a,b)=>priority[a.type]-priority[b.type]);
+    candidates.sort((a,b)=>priority[a.type]-priority[b.type]||Number(!!b.containerGroup)-Number(!!a.containerGroup));
     for(const c of candidates){
       const textNode=c.el.firstChild;
       const letters=Array.from(c.name);
@@ -165,7 +166,7 @@ globalThis.C4Map = class {
       Object.assign(hoverItems.get(c.id),{caption:c});
       this.labels.push(c.el);
     }
-    function drawOutline(c,segment,width){
+    function drawOutline(c,segment,offset,width){
       // The floor remains one hit region. Only its own stroked perimeter has a gap.
       let path='M'+c.corners[0].join(' ');
       c.corners.forEach((a,i)=>{
@@ -173,7 +174,7 @@ globalThis.C4Map = class {
         if(width&&segment?.a===a){
           const half=Math.min(.48,width/(2*Math.abs(b[0]-a[0])));
           const at=t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t].join(' ');
-          path+=' L'+at(.5-half)+' M'+at(.5+half);
+          path+=' L'+at(Math.max(0,offset-half))+' M'+at(Math.min(1,offset+half));
         }
         path+=' L'+b.join(' ');
       });
@@ -200,7 +201,7 @@ globalThis.C4Map = class {
       }
       if(c.outline){
         const width=active?c.variants[0].width/this.scale:p.box.right-p.box.left;
-        drawOutline(c,p.segment,p.visible||active?width+6/this.scale:0);
+        drawOutline(c,p.segment,p.offset,p.visible||active?width+6/this.scale:0);
       }
     };
     this.layoutCaptions=()=>{

@@ -1452,6 +1452,7 @@
     const areas=attrs['context.areas']||owner?.attributes?.['context.areas']||[];
     addField('Domain',areas.map(area=>area.name).join(' › '));
     addField('System',owner?.name);
+    addField('Container group',attrs['context.containerGroup']?.name);
     addField('Runtime type',attrs['context.catalogType']);
     addField('Technology',attrs['context.technology']);
     if(Number.isInteger(attrs['context.containerCount']))addField('Declared containers',String(attrs['context.containerCount']));

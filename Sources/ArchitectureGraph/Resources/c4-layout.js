@@ -7,9 +7,9 @@ globalThis.C4Layout = (() => {
 
   function plan(nodes, edges, subject) {
     const areas = new Map(), objects = new Map(), roots = [];
-    function area(id, name, siblings) {
+    function area(id, name, siblings, containerGroup = false) {
       if (!areas.has(id)) {
-        const entry = {id, name, children: []};
+        const entry = {id, name, children: [], containerGroup};
         areas.set(id, entry);
         siblings.push(entry);
       }
@@ -30,7 +30,10 @@ globalThis.C4Layout = (() => {
     }
     for (const node of sorted.filter(n=>n.attributes?.['context.owner'])) {
       const parent=areas.get(node.attributes['context.owner']);
-      (parent?.children || domain(node)).push({id:node.id,name:node.name,node});
+      let siblings=parent?.children || domain(node);
+      const group=node.attributes['context.containerGroup'];
+      if(parent&&group)siblings=area(group.id,group.name,siblings,true).children;
+      siblings.push({id:node.id,name:node.name,node});
     }
     const root={children:roots};
     // At each boundary a relationship connects two direct children, or leads
@@ -290,8 +293,14 @@ globalThis.C4Layout = (() => {
           for(const dx of [0,-offset/2,offset/2,-offset,offset])anchors.push({x:center+dx,y});
         }else{
           for(const segment of item.segments){
-            const x=(segment.a[0]+segment.b[0])/2,y=(segment.a[1]+segment.b[1])/2;
-            anchors.push({x,y,segment});
+            const horizontal=Math.abs(segment.b[0]-segment.a[0]);
+            const margin=horizontal?(width/2+gap)/horizontal:Infinity;
+            const offsets=item.containerGroup&&margin<.5?[.5,margin,1-margin]:[.5];
+            for(const offset of offsets){
+              const x=segment.a[0]+offset*(segment.b[0]-segment.a[0]);
+              const y=segment.a[1]+offset*(segment.b[1]-segment.a[1]);
+              anchors.push({x,y,segment,offset});
+            }
           }
         }
         for(const anchor of anchors){
@@ -304,7 +313,7 @@ globalThis.C4Layout = (() => {
           const conflicts=occupied.filter(({box:b})=>box.left<b.right+gap&&box.right>b.left-gap&&
             box.top<b.bottom+gap-1e-8&&box.bottom>b.top-gap+1e-8);
           if(!conflicts.length){chosen=candidate;break;}
-          if(item.id===subject&&!displace&&conflicts.every(entry=>entry.type==='area-label')){
+          if(item.id===subject&&!displace&&conflicts.every(entry=>entry.type==='area-label'&&!entry.containerGroup)){
             displace={candidate,conflicts};
           }
         }
@@ -318,7 +327,7 @@ globalThis.C4Layout = (() => {
         }
       }
       if(chosen&&item.generic)chosen.visible=false;
-      if(chosen?.visible)occupied.push({id:item.id,type:item.type,box:chosen.box});
+      if(chosen?.visible)occupied.push({id:item.id,type:item.type,containerGroup:item.containerGroup,box:chosen.box});
       placements.set(item.id,chosen||fallback);
     }
     return placements;

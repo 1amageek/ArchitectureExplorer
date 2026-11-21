@@ -99,7 +99,10 @@ The Map profile adds the following constraints to standard Structurizr DSL:
 - Declare each top-level person or software system inside one named model-level
   `group`. The group declares a domain area. Multiple elements may share it.
   Each container belongs to its enclosing software system and inherits its domain.
-  Domain groups and the expanded system boundary form the area hierarchy.
+  Within a software system, a named `group` can contain container declarations.
+  These groups form sibling areas within the expanded system in C2. Group names
+  must be nonblank and unique within their owning system. Ungrouped containers
+  remain directly in the system area. C1 displays the model-level groups.
 - Give each element a unique flat identifier independent of its screen
   position. Use a nonblank domain name unique within the model.
 - Declare directed interactions between existing element identifiers, with a

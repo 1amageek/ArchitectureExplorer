@@ -22,6 +22,25 @@ test('expanding a system preserves exterior anchors and nested area membership',
   }
 });
 
+test('C2 places declared app and backend groups in separate areas within the same system',()=>{
+  const system={id:'system',name:'System',attributes:{'context.areas':[{id:'domain',name:'Product'}]}};
+  const app={id:'app-area',name:'App'}, backend={id:'backend-area',name:'Backend'};
+  const container=(id,group)=>({id,name:id,attributes:{'context.owner':system.id,'context.containerGroup':group}});
+  const nodes=[system,container('client',app),container('api',backend),container('db',backend),container('other')];
+  const edge={id:'request',source:'client',target:'api'};
+  const plan=C4Layout.plan(nodes,[edge],system.id);
+  const areas=new Map(plan.areas.map(area=>[area.id,area]));
+  const parent=areas.get(system.id), left=areas.get(app.id), right=areas.get(backend.id);
+  assert.deepEqual(left.children.map(child=>child.id),['client']);
+  assert.deepEqual(right.children.map(child=>child.id),['api','db']);
+  assert.deepEqual(new Set(parent.children.map(item=>item.id)),new Set([app.id,backend.id,'other']));
+  assert(left.x+left.width<=right.x||right.x+right.width<=left.x||
+    left.z+left.depth<=right.z||right.z+right.depth<=left.z);
+  assert.equal(plan.paths[0].edge,edge);
+  assert.deepEqual(new Set(plan.visibleAreas(new Set(['api']))),new Set(['domain',system.id,backend.id]));
+  assert.deepEqual(C4Layout.plan([system],[]).areas.map(area=>area.id),['domain']);
+});
+
 test('buses start on the source footprint and end at the target approach port',()=>{
   const nodes=['a','b','c','d'].map(id=>({id,name:id,kind:'application'}));
   const edges=nodes.flatMap(source=>nodes.map(target=>({
@@ -77,6 +96,18 @@ test('nested captions use front edges and reserve the active area when both side
   assert.equal(p.get('middle').segment,items[1].segments[1]);
   assert.equal(p.get('active').segment,items[2].segments[0]);
   assert(p.get('active').visible);
+});
+
+test('container group captions can slide along a crowded edge and retain priority over the system caption',()=>{
+  const segment={a:[0,40],b:[120,0]};
+  const group={type:'area-label',id:'app',containerGroup:true,height:12,
+    variants:[{text:'App',width:24}],segments:[segment]};
+  const system={...group,id:'system',containerGroup:false,segments:[{a:[0,40],b:[30,30]}]};
+  const glyph={left:42,right:78,top:8,bottom:27};
+  const captions=C4Layout.placeCaptions([group,system],[glyph],1,system.id);
+  assert(captions.get(group.id).visible);
+  assert.equal(captions.get(group.id).offset,.125);
+  assert(!captions.get(system.id).visible);
 });
 
 test('operation captions use a clear straight segment and generic labels wait for interaction',()=>{

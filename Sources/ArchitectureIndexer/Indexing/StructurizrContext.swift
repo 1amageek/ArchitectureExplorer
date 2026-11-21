@@ -14,6 +14,7 @@ struct StructurizrContext {
     let kind: String, name: String, description: String, technology: String, tags: String
     let owner: String?
     let domain: String
+    let containerGroup: String?
     let entry: EntryLink?
     let sources: [JSONValue]
     let declaration: JSONValue
@@ -32,7 +33,7 @@ struct StructurizrContext {
   }
 
   private enum Block: Equatable {
-    case workspace, model, domain(String), system(String), views, view
+    case workspace, model, domain(String), system(String), containerGroup(owner: String, name: String), views, view
   }
 
   private static func tokens(_ line: Substring) throws -> [String] {
@@ -65,6 +66,7 @@ struct StructurizrContext {
     var stack: [Block] = [], elements: [String: Element] = [:], relations: [Relation] = []
     var workspaceSeen = false, modelSeen = false, viewsSeen = false, explicitRelations = false
     var domains = Set<String>()
+    var containerGroups: [String: Set<String>] = [:]
     var viewSubject: String?, viewKinds = Set<String>(), viewKeys = Set<String>(), includesAll = false
     func validID(_ s: String) -> Bool {
       s.range(of: #"^[A-Za-z_][A-Za-z0-9_]*$"#, options: .regularExpression) != nil
@@ -148,18 +150,29 @@ struct StructurizrContext {
         stack.append(.domain(name))
       case .model:
         throw invalid("Declare each system or person inside a named domain group.")
-      case .domain, .system:
+      case .system(let owner) where opens && first == "group" && w.count == 2:
+        let name = w[1]
+        guard !name.trimmingCharacters(in: .whitespaces).isEmpty,
+          containerGroups[owner, default: []].insert(name).inserted else {
+          throw invalid("A container group needs a unique, nonblank name within its software system.")
+        }
+        stack.append(.containerGroup(owner: owner, name: name))
+      case .domain, .system, .containerGroup:
         guard (4...7).contains(w.count), w[1] == "=", validID(first), elements[first] == nil,
           !w[3].trimmingCharacters(in: .whitespaces).isEmpty else { throw invalid("Invalid or duplicate element declaration.") }
         let kind = w[2]
         let owner: String?
         let domain: String
+        let containerGroup: String?
         switch stack.last {
         case .system(let id):
           guard let parent = elements[id] else { throw invalid("Unknown container owner.") }
-          owner = id; domain = parent.domain
+          owner = id; domain = parent.domain; containerGroup = nil
+        case .containerGroup(let id, let name):
+          guard let parent = elements[id] else { throw invalid("Unknown container owner.") }
+          owner = id; domain = parent.domain; containerGroup = name
         case .domain(let name):
-          owner = nil; domain = name
+          owner = nil; domain = name; containerGroup = nil
         default: throw invalid("Missing domain group.")
         }
         guard (owner == nil ? ["person", "softwareSystem"].contains(kind) : kind == "container"),
@@ -169,7 +182,9 @@ struct StructurizrContext {
         let tagIndex = kind == "container" ? 6 : 5
         elements[first] = Element(kind: kind, name: w[3], description: w.count > 4 ? w[4] : "",
           technology: kind == "container" && w.count > 5 ? w[5] : "",
-          tags: w.count > tagIndex ? w[tagIndex] : "", owner: owner, domain: domain, entry: kind == "container" ? entry : nil, sources: sources, declaration: declaration, anchor: anchor)
+          tags: w.count > tagIndex ? w[tagIndex] : "", owner: owner, domain: domain,
+          containerGroup: containerGroup, entry: kind == "container" ? entry : nil, sources: sources,
+          declaration: declaration, anchor: anchor)
         if opens { stack.append(.system(first)) }
       default: throw invalid("Unsupported Structurizr statement in this scope.")
       }
@@ -205,7 +220,14 @@ struct StructurizrContext {
       attrs["context.areas"] = .array([.object(["id": .string(identity("domain:" + el.domain)), "name": .string(el.domain)])])
       if let entry = el.entry, let ids = bindings[entry], ids.count == 1 { attrs["context.entryID"] = .string(ids[0]) }
       if !el.sources.isEmpty { attrs["context.citedSources"] = .array(el.sources) }
-      if let owner = el.owner { attrs["context.owner"] = .string(identity(owner)) }
+      if let owner = el.owner {
+        attrs["context.owner"] = .string(identity(owner))
+        if let group = el.containerGroup {
+          attrs["context.containerGroup"] = .object([
+            "id": .string(identity("container-group:\(owner):\(group)")), "name": .string(group)
+          ])
+        }
+      }
       if alias == viewSubject { attrs["context.mapSubject"] = .bool(true) }
       if el.kind == "softwareSystem" { attrs["context.containerCount"] = .number(Double(counts[alias, default: 0])) }
       nodes.append(Entity(id: identity(alias), kind: el.kind == "container" ? (store ? "dataStore" : "application") : el.kind,
