@@ -64,7 +64,8 @@
     if(external?.panel?.open)external.panel.close();
     closePicker();c4Map?.dispose();c4Map=undefined;
     cy?.elements().remove();syncHeaderMenus([]);
-    for(const id of ['graph','c4-surface','node-list','workspace-models','spec-report','verification-summary','trace-steps','file-detail','more','follow-map'])$(id).hidden=true;
+    for(const id of ['graph','c4-surface','node-list','workspace-models','open-specification','specification-reader','spec-report','verification-summary','trace-steps','file-detail','more','follow-map'])$(id).hidden=true;
+    $('specification-reader').replaceChildren();
     $('navigator').replaceChildren();$('node-list').replaceChildren();$('scope-count').textContent='…';
     $('view-title').textContent=title;$('breadcrumb').replaceChildren(text('span',title,'crumb-current'));
     $('counts').textContent='Loading…';$('snapshot-short').textContent='—';$('mode-label').textContent='';
@@ -91,7 +92,7 @@
   }
   function routeTitle(route){
     return {context:'System Context',container:'Containers',module:'Modules',component:'Types & Groups',function:'Functions & Methods',file:'Files'}[route.level]||
-      {'graph.cfg':'Control flow','graph.impact':'Impact','graph.neighbors':'Neighbors','graph.search':'Search results'}[route.method]||'Architecture';
+      {'graph.cfg':'Control flow','graph.impact':'Impact','graph.neighbors':'Neighbors','graph.search':'Search results','workspace.specification':'Specification'}[route.method]||'Architecture';
   }
   function logGraph(view,label){
     terminal.write('info',label+' · '+view.nodes.length+' entities · '+view.edges.length+' relations · '+view.snapshotID.slice(0,8));
@@ -525,6 +526,13 @@
     const response=await fetch(url,{credentials:'same-origin'});const value=await response.json();
     if(!response.ok||value.error)throw Error(value.error?.message||value.error||('HTTP '+response.status));return value;
   }
+  async function readWorkspaceSpecification(snapshotID){
+    const result=await rpc('workspace.specification',{snapshotID});
+    if(result.snapshotID!==snapshotID)throw Error('Specification snapshot mismatch.');
+    if(result.status==='missing')return result;
+    if(result.status!=='available'||typeof result.path!=='string'||typeof result.text!=='string')throw Error('Specification data is unavailable.');
+    return result;
+  }
   const external = !repositoryMode && typeof window.ArchitectureExtensionUI === 'function' ? new window.ArchitectureExtensionUI({rpc,saved,view:()=>(navigation?.verification||view?.canvas)?sourceView:view,enterVerification,paint:destinationPaint,log:terminal.write,onVerificationStatus:message=>{if(navigation?.verification)$('footer-status').textContent=message;},leaveVerification:()=>window.history.back(),selection:()=>selected,onPublicationsChanged:refreshWorkspaceModels,onCanvas:(data,publication,id,active,resolve)=>canvas.contribution(data,publication,id,active,resolve),onNavigate:(id,snapshotID)=>go({method:'graph.neighbors',focus:id,snapshotID,depth:0})}) : null;
   const headerMenus=new Map();
   let pickerAnchor,pickerPoint,headerFrame;
@@ -853,7 +861,7 @@
   }
   let hierarchy={nodes:[]};
   const navigationCache=new Map();
-  const navigationMethods=new Set(['graph.overview','graph.children','graph.neighbors','graph.impact','graph.search','graph.cfg']);
+  const navigationMethods=new Set(['graph.overview','graph.children','graph.neighbors','graph.impact','graph.search','graph.cfg','workspace.specification']);
   function recognizedNavigation(state){return state?.architectureExplorer===1&&Number.isInteger(state.index)&&state.index>=0&&navigationMethods.has(state.query?.method);}
   function cacheNavigation(state){navigationCache.delete(state.index);navigationCache.set(state.index,state);if(navigationCache.size>32)navigationCache.delete(navigationCache.keys().next().value);}
   function enterVerification(source,entity,project=false){
@@ -981,7 +989,10 @@
     allFileDeclarations=!!state.allFileDeclarations;navigation=state;query=state.query;clearSelection(false);hierarchy={nodes:[]};renderBreadcrumbs(true);
     $('level').value=state.level||query.level||'module';$('relation').value=query.kinds?.[0]||'';$('language').value=query.languages?.[0]||'';$('direction').value=query.direction||'outgoing';$('search').value=query.method==='graph.search'?query.text||'':'';
     setListView(!!state.list);$('back').disabled=state.index===0;
-    $('level').hidden=!!(state.canvasSessionID||state.loadingCanvas||state.verification);$('diff').hidden=$('level').hidden;
+    const readingSpec=query.method==='workspace.specification'&&!state.canvasSessionID&&!state.loadingCanvas;
+    $('level').hidden=readingSpec||!!(state.canvasSessionID||state.loadingCanvas||state.verification);$('diff').hidden=$('level').hidden;
+    $('list-toggle').hidden=readingSpec;$('export').hidden=readingSpec;
+    if(readingSpec){$('canvas-tools').hidden=true;$('model-info-toggle').hidden=true;}
     beginDestination(state.loadingCanvas?.title||state.title||routeTitle(query),query.snapshotID?'Snapshot '+query.snapshotID+' · Loading…':'Loading…');
   }
   function setupNavigation(){
@@ -1022,6 +1033,11 @@
     try{
     if(pendingDestination)await destinationPaint();
     if(serial!==request)return;
+    if(query.method==='workspace.specification'){
+      const specification=await readWorkspaceSpecification(query.snapshotID);
+      if(serial===request)renderSpecification(specification);
+      return;
+    }
     next=await rpc(query.method,query);
     if(serial!==request)return;
     if(!next.nodes)throw Error('The selected API did not return a graph view.');
@@ -1037,6 +1053,16 @@
     if(!selected&&!selectedFact&&navigation?.selection)selected=view.nodes.find(n=>n.id===navigation.selection);
     if(selected){const node=view.nodes.find(n=>n.id===selected.id);if(node)inspect(node);else if(refresh){$('inspector').replaceChildren(text('h2','Selection changed'),text('p','This entity was deleted or moved outside the visible view. Use Back to return to its previous scope.'));}}
     }catch(error){if(serial!==request)return;if(token)failDestination(token,error,()=>load());else throw error;}
+  }
+  function renderSpecification(specification){
+    finishDestination();$('empty').hidden=true;
+    const reader=$('specification-reader'),missing=specification.status==='missing';
+    const heading=text('h2',specification.path||'SPEC.md');heading.id='specification-file';
+    reader.replaceChildren(heading,missing?text('p','No SPEC.md recorded in this workspace.'):text('pre',specification.text));
+    reader.hidden=false;reader.scrollTop=0;
+    $('counts').textContent=missing?'No specification':'Specification';$('scope-count').textContent='';
+    $('snapshot-short').textContent=specification.snapshotID.slice(0,8);
+    $('footer-status').textContent='Specification · Snapshot '+specification.snapshotID.slice(0,8);
   }
   function focusNavigatorNode(id){
     const element=cy.getElementById(id);
@@ -1151,6 +1177,8 @@
     $('canvas-options-toggle').hidden=!sourceOptions&&!shared;
     if($('canvas-options-toggle').hidden&&$('canvas-options').matches(':popover-open'))$('canvas-options').hidePopover();
     $('level').hidden=!!view.canvas;$('diff').hidden=!!view.canvas;
+    $('open-specification').hidden=saved||repositoryMode||!!view.canvas;
+    $('list-toggle').hidden=false;$('export').hidden=false;
     $('follow-map').hidden=saved||!isMap||!query.snapshotID;
     $('snapshot-short').textContent=view.snapshotID.slice(0,8);$('counts').textContent=fileOutline?`${layoutRequest.nodes.length} entities on canvas · ${links.length} ${links.length===1?'link':'links'}`:`${view.nodes.length} entities · ${view.edges.length} relations`;
     $('workspace').textContent=container?.workspace||view.extensions?.['c4.context']?.workspace||view.nodes.find(n=>n.kind==='workspace')?.name||$('workspace').textContent;
@@ -1429,7 +1457,7 @@
       external?.modelCommand(box,node,()=>{});
       external?.modelSlot(box,{entity:node.id,projectOnly:true});
       try{
-        const result=await rpc('workspace.specification',{snapshotID});
+        const result=await readWorkspaceSpecification(snapshotID);
         if(serial!==inspection||selected?.id!==node.id||snapshotID!==view.snapshotID)return;
         if(result.status==='missing'){status.textContent='No SPEC.md recorded in this workspace.';return;}
         const detail=document.createElement('details');detail.open=true;
@@ -1577,6 +1605,11 @@
     if(!saved)go({method:'graph.overview',level:'context',...(query.snapshotID?{snapshotID:query.snapshotID}:{})});
   };
   $('back').onclick=()=>{if(!saved&&navigation?.index>0)window.history.back();};
+  $('open-specification').onclick=()=>{
+    if($('open-specification').hidden||!view?.snapshotID)return;
+    go({method:'workspace.specification',snapshotID:view.snapshotID});
+    $('back').focus({preventScroll:true});
+  };
   $('level').onchange=()=>{
     const level=$('level').value;
     const inContainer=view?.extensions?.['c4.container']&&selected?.attributes?.['context.owner'];

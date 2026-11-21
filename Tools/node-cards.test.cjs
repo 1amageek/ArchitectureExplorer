@@ -324,6 +324,44 @@ test('compound rendering keeps every fact in List and retains routes and manual 
 
 const settle=()=>new Promise(setImmediate);
 const requestedQuery=page=>JSON.parse(new URL('http://localhost'+page.networkRequests.filter(url=>url.startsWith('/api?')&&JSON.parse(new URL('http://localhost'+url).searchParams.get('params')).method).at(-1)).searchParams.get('params'));
+test('the source toolbar opens the pinned specification before reading, and Back restores the graph',async t=>{
+  const specificationReads=[];
+  const page=await render([entity('workspace','workspace')],[],false,{fetch:(raw,view)=>{
+    const url=new URL(raw,'http://localhost');
+    if(url.searchParams.get('method')!=='workspace.specification')return {ok:true,json:async()=>view};
+    const params=JSON.parse(url.searchParams.get('params'));
+    assert.deepEqual(params,{snapshotID:'snapshot'});
+    return new Promise(resolve=>specificationReads.push(result=>resolve({ok:true,json:async()=>result})));
+  }});t.after(()=>page.cy.destroy());
+  const open=page.elements.get('open-specification'),reader=page.elements.get('specification-reader');
+  assert.equal(open.hidden,false);
+  open.onclick();
+  assert.equal(page.elements.get('view-title').textContent,'Specification');
+  assert.equal(page.elements.get('graph').hidden,true);
+  assert.equal(specificationReads.length,0);
+  await settle();
+  const body='# Requirements\n\n<literal text>';
+  specificationReads[0]({status:'available',snapshotID:'snapshot',path:'SPEC.md',text:body});
+  await settle();
+  assert.equal(reader.hidden,false);
+  assert.deepEqual(reader.children.map(child=>child.textContent),['SPEC.md',body]);
+  assert.equal(reader.children[1].innerHTML,undefined);
+  assert.equal(page.history.entries.length,2);
+  page.history.back();await settle();
+  assert.equal(reader.hidden,true);
+  assert.equal(page.cy.getElementById('workspace').length,1);
+  page.history.forward();await settle();
+  specificationReads[1]({status:'available',snapshotID:'other-snapshot',path:'SPEC.md',text:body});
+  await settle();
+  assert.equal(reader.hidden,true);
+  assert.equal(page.elements.get('counts').textContent,'Unavailable');
+  page.elements.get('empty').children.find(child=>child.textContent==='Retry').fire('click');
+  await settle();
+  specificationReads[2]({status:'missing',snapshotID:'snapshot'});await settle();
+  assert.equal(reader.hidden,false);
+  assert.equal(reader.children[1].textContent,'No SPEC.md recorded in this workspace.');
+  assert.equal(page.history.entries.length,2);
+});
 test('a source destination clears the old drawing before its read, retains failure and retries without new history',async t=>{
  const requests=[];let intercept=false;
  const page=await render([entity('old','module')],[],false,{fetch:(url,view)=>{

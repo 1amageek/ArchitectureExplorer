@@ -247,6 +247,11 @@ h1 { min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; font-si
 .view-actions button, .view-actions select { height: 24px; padding: 0 7px; font-size: 11px; }
 .view-actions select { flex: 0 1 144px; min-width: 0; width: 144px; }
 .view-actions button { flex-shrink: 0; white-space: nowrap; }
+#specification-reader { flex: 1; min-height: 0; overflow: auto; padding: 28px clamp(16px, 5cqi, 48px); }
+#specification-reader > * { max-width: 78ch; margin-inline: auto; }
+#specification-reader h2 { margin-block: 0 16px; font-size: 17px; }
+#specification-reader pre { font: 12px/1.65 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+main:has(#specification-reader:not([hidden])) > .canvas-wrap { display: none; }
 .filters { display: flex; align-items: center; gap: 12px; height: 32px; min-height: 32px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--subtle-surface); color: var(--secondary); font-size: 10px; }
 .filters label { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
 .filters select { height: 23px; max-width: 110px; padding: 0 2px; border: 0; background: transparent; color: var(--text); font-size: 10px; }
