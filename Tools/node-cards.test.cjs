@@ -160,11 +160,20 @@ test('source Canvas filter keeps ancestor frames and both controls operate on th
   assert.equal(page.networkRequests.length,requests);
 });
 test('card and accessible List preserve signature, source, owner and synthetic origin',async t=>{
-  const page=await render([entity('Owner','function',{'syntax.signature':'func Owner(_ x: Int) -> Int'},{anchor:{path:'Sources/Flow.swift'}}),entity('Boundary','basicBlock',{'cfg.synthetic':true,'cfg.functionID':'Owner'}),entity('Target','module',{'project.manifest':'Package.swift'}),entity('TypeOwner','type'),entity('Member','method')],[{id:'member-owner',source:'TypeOwner',target:'Member',kind:'contains'}]);t.after(()=>page.cy.destroy());
+  const signature='func save(_ tasks: List) throws -> Int';
+  const callable={'declaration.callable':{version:1,parameters:[{spelling:'_ tasks: List'}],effects:['throws'],resultStatus:'recorded',results:[{type:'Int'}]},'syntax.signature':signature};
+  const page=await render([entity('Owner','function',{'syntax.signature':'func Owner(_ x: Int) -> Int'},{anchor:{path:'Sources/Flow.swift'}}),entity('save','method',callable,{anchor:{path:'Sources/Flow.swift'}}),entity('Boundary','basicBlock',{'cfg.synthetic':true,'cfg.functionID':'Owner'}),entity('Target','module',{'project.manifest':'Package.swift'}),entity('TypeOwner','type'),entity('Member','method')],[{id:'member-owner',source:'TypeOwner',target:'Member',kind:'contains'}]);t.after(()=>page.cy.destroy());
   assert.match(page.svg('Owner'),/func Owner\(_ x: Int\) -&gt; Int/);
   assert.match(page.svg('Owner'),/Sources\/Flow.swift/);
   assert.match(page.svg('Boundary'),/Basic Block · Synthetic/);assert.match(page.svg('Boundary'),/in Owner/);assert.match(page.svg('Boundary'),/No source anchor/);
   assert.match(page.svg('Target'),/Package.swift/);assert.match(page.svg('Member'),/in TypeOwner/);
+  const save=page.svg('save');
+  assert.equal(page.cy.getElementById('save').height(),112);
+  assert.match(save,/<text x="12" y="54"[^>]*>save\(_ tasks: List\)<\/text>/);
+  assert.match(save,/<text x="12" y="75"[^>]*>throws → Int<\/text>/);
+  assert.equal(save.split('_ tasks: List').length,2);
+  page.cy.getElementById('save').emit('mouseover');
+  assert.ok(page.elements.get('graph').title.includes(signature));
   const row=page.elements.get('node-list').children[0];assert.match(row.children[1].children[1].textContent,/func Owner\(_ x: Int\) -> Int.*Sources\/Flow.swift/);
 });
 test('source strings become escaped bounded SVG text, never executable markup',async t=>{
@@ -764,10 +773,12 @@ test('method nodes reserve result space and retain bordered selectable Edge endp
   const page=await render([entity('owner','actor'),entity('fetch','method',attrs),entity('init','method',{'declaration.kind':'initializer','declaration.parameters':'(token: String)','declaration.modifiers':[]}),entity('legacy','method',{'syntax.signature':'private func legacy() -> Value'}),entity('outside','function')],[...['fetch','init','legacy'].map(id=>({id:'owns-'+id,source:'owner',target:id,kind:'contains'})),{id:'call',source:'fetch',target:'outside',kind:'calls'}],true);t.after(()=>page.cy.destroy());
   const svg=page.svg('fetch'),method=page.cy.getElementById('fetch');
   assert.equal(method.width(),264);assert.equal(method.height(),140);assert.match(svg,/data-presentation="callable-node"/);assert.ok(parseFloat(method.style('border-width'))>0);assert.ok(Number(method.style('background-opacity'))>0);
-  for(const value of ['public','fetch','async throws','→ [String: Int]'])assert.ok(svg.includes('>'+value+'<'),value);
+  for(const value of ['public','async throws','→ [String: Int]'])assert.ok(svg.includes('>'+value+'<'),value);
+  assert.match(svg,/<text x="12" y="45"[^>]*>fetch\(_ key: String, .*…<\/text>/);
+  assert.doesNotMatch(svg,/<text[^>]*>\(_ key:/);
   assert.match(svg,/<text x="12" y="110"[^>]*>→ \[String: Int\]<\/text>/);
   assert.match(svg,/data-role="method"[^>]*translate\(32 3\)/);assert.match(svg,/text-anchor="middle" dominant-baseline="central"/);assert.match(svg,/…/);
-  assert.match(svg,/data-language="swift"/);assert.match(svg,/data-logo-part="bird"[^>]*fill="#ffffff"/);assert.doesNotMatch(svg,/No source anchor/);assert.match(page.svg('init'),/>Initializer</);assert.doesNotMatch(page.svg('init'),/→ Void|→ Self/);assert.match(page.svg('legacy'),/not recorded/);assert.match(page.svg('legacy'),/private func legacy/);
+  assert.match(svg,/data-language="swift"/);assert.match(svg,/data-logo-part="bird"[^>]*fill="#ffffff"/);assert.doesNotMatch(svg,/No source anchor/);assert.match(page.svg('init'),/>init\(token: String\)</);assert.match(page.svg('init'),/>Initializer</);assert.doesNotMatch(page.svg('init'),/→ Void|→ Self/);assert.match(page.svg('legacy'),/not recorded/);assert.match(page.svg('legacy'),/private func legacy/);
   assert.equal(page.cy.getElementById('outside').height(),140);
   method.emit('tap');assert.equal(page.cy.$(':selected').id(),'fetch');assert.ok(page.elements.get('inspector').children.some(e=>e.textContent==='fetch'));assert.equal(page.cy.getElementById('call').source().id(),'fetch');
   page.theme.value='dark';page.media.change();assert.notEqual(page.svg('fetch'),svg);assert.equal(page.cy.$(':selected').id(),'fetch');assert.equal(method.height(),140);
@@ -806,7 +817,7 @@ test('fixed card widths and original property rows survive Swift/Rust metadata, 
 test('methods with children keep readable compact headers and allocated compound bounds',async t=>{
   const page=await render([entity('owner','actor'),entity('request','method',{'declaration.access':'private','declaration.parameters':'()','declaration.returnType':'Response','declaration.modifiers':['async','throws']}),entity('local','field',{'declaration.binding':'let','declaration.type':'String'})],[{id:'method',source:'owner',target:'request',kind:'contains'},{id:'local',source:'request',target:'local',kind:'contains'}],true);t.after(()=>page.cy.destroy());
   const method=page.cy.getElementById('request'),local=page.cy.getElementById('local');
-  assert.equal(method.isParent(),true);assert.ok(method.width()>=264);assert.match(page.svg('request'),/data-presentation="callable-frame"/);assert.match(page.svg('request'),/>private</);assert.match(page.svg('request'),/>→ Response</);
+  assert.equal(method.isParent(),true);assert.ok(method.width()>=264);assert.match(page.svg('request'),/data-presentation="callable-frame"/);assert.match(page.svg('request'),/>private</);assert.match(page.svg('request'),/>request\(\)</);assert.match(page.svg('request'),/>→ Response</);
   assert.equal(local.parent().id(),'request');assert.ok(local.boundingBox().y1>=method.boundingBox().y1+140);
 });
 

@@ -316,25 +316,50 @@
   function svgRoleMark(node,accent,x=10,y=6){
     return `<g data-role="${symbolRole(node)}" transform="translate(${x} ${y})"><rect x=".5" y=".5" width="19" height="19" rx="4" fill="${accent}" fill-opacity=".14" stroke="${accent}"/><text x="10" y="10" text-anchor="middle" dominant-baseline="central" font-family="${monoFont}" font-size="11" font-weight="600" fill="${accent}">${xml(symbolKind(node)[1])}</text></g>`;
   }
-  function callableNode(node,context,width=ArchitectureLayout.callable.width,group=false){
-    const height=ArchitectureLayout.callable.height,style=getComputedStyle(document.documentElement),color=key=>style.getPropertyValue(key).trim(),attributes=node.attributes||{};
+  const strings=value=>Array.isArray(value)?value.filter(item=>typeof item==='string'):[];
+  function callableDeclaration(node){
+    const attributes=node.attributes||{};
     const recorded=key=>typeof attributes[key]==='string'?attributes[key]:undefined;
     const structured=attributes['declaration.callable']?.version===1?attributes['declaration.callable']:undefined;
-    const strings=value=>Array.isArray(value)?value.filter(v=>typeof v==='string'):[];
-    const parameters=Array.isArray(structured?.parameters)?'('+structured.parameters.map(p=>p.spelling).filter(v=>typeof v==='string').join(', ')+')':recorded('declaration.parameters');
+    const generics=strings(structured?.typeParameters);
+    const receiver=structured?.receiver?.spelling;
+    const explicitReceiver=typeof receiver==='string'&&receiver.length>0?receiver:'';
+    let parameters=recorded('declaration.parameters');
+    if(symbolRole(node)==='deinitializer')parameters='';
+    else if(Array.isArray(structured?.parameters)){
+      const spellings=strings(structured.parameters.map(parameter=>parameter?.spelling));
+      if(explicitReceiver)spellings.unshift(explicitReceiver);
+      parameters='('+spellings.join(', ')+')';
+    }
+    const title=singleLine(node.name+(generics.length?'<'+generics.join(', ')+'>':'')+(parameters??'')).toWellFormed();
     const results=structured?.resultStatus==='recorded'?structured.results:undefined;
-    const result=Array.isArray(results)?results.map(r=>r.type).filter(v=>typeof v==='string').join(', '):recorded('declaration.returnType');
-    const modifiers=structured?[...strings(structured.modifiers),...strings(structured.effects),...strings(structured.safety)]:Array.isArray(attributes['declaration.modifiers'])?strings(attributes['declaration.modifiers']):undefined,access=structured?.access||recorded('declaration.access');
-    const role=symbolRole(node),special=role==='initializer'?'Initializer':role==='deinitializer'?'Deinitializer':undefined,known=parameters!==undefined||result!==undefined||modifiers!==undefined;
-    const generics=strings(structured?.typeParameters),receiver=structured?.receiver;
-    const receiverText=typeof receiver?.spelling==='string'?receiver.spelling:receiver?.kind==='instance'?'self':receiver?.kind==='type'?'type member':'';
+    const result=Array.isArray(results)?strings(results.map(item=>item?.type)).join(', '):recorded('declaration.returnType');
+    const modifiers=structured?[...strings(structured.modifiers),...strings(structured.effects),...strings(structured.safety)]:
+      Array.isArray(attributes['declaration.modifiers'])?strings(attributes['declaration.modifiers']):undefined;
+    return {structured,title,hasParameters:parameters!==undefined,explicitReceiver,result,modifiers,access:structured?.access||recorded('declaration.access')};
+  }
+  function callableTitleSize(title,width){
+    measuring.font=`600 21px ${monoFont}`;
+    return title.length<=2048&&measuring.measureText(title).width<=width?21:16;
+  }
+  function callableNode(node,context,width=ArchitectureLayout.callable.width,group=false){
+    const height=ArchitectureLayout.callable.height,style=getComputedStyle(document.documentElement),color=key=>style.getPropertyValue(key).trim();
+    const {structured,title,hasParameters,explicitReceiver,result,modifiers,access}=callableDeclaration(node);
+    const role=symbolRole(node),special=role==='initializer'?'Initializer':role==='deinitializer'?'Deinitializer':undefined,known=hasParameters||result!==undefined||modifiers!==undefined;
+    const receiver=structured?.receiver;
+    const receiverText=hasParameters&&explicitReceiver?'':explicitReceiver||(receiver?.kind==='instance'?'self':receiver?.kind==='type'?'type member':'');
     const details=[receiverText,...strings(structured?.annotations)].filter(Boolean).join(' · '),constraints=strings(structured?.constraints).join(' · ');
     const label=(value,x,y,space,tint,size=12,weight=400)=>`<text x="${x}" y="${y}" font-family="${monoFont}" font-size="${size}" font-weight="${weight}" fill="${tint}">${xml(fitText(value,space,`${weight} ${size}px ${monoFont}`))}</text>`;
     const logo=svgLanguageMark(node,8,4,key=>color('--graph-'+key));
     const resultText=special||('→ '+(result||'not recorded'));
     const items=nodeAccessories(node.id),reserved=items?.length?20:0;
     const heading=svgRoleMark(node,color('--graph-role-'+roleToken(node)),logo?32:8,3)+label(symbolKind(node)[0],logo?59:36,17,width-(logo?59:36)-120-reserved,color('--graph-node-secondary'),10,600)+label(access||(known?'implicit':'—'),width-112-reserved,17,74,color('--syntax-keyword'),10)+logo;
-    const content=label(node.name+(generics.length?'<'+generics.join(', ')+'>':''),12,45,width-24,color('--graph-node-text'),21,600)+label(parameters!==undefined?parameters:context.signature||'Parameters not recorded',12,63,width-24,color('--graph-node-secondary'),11)+label(details,12,78,width-24,color('--graph-node-secondary'),10.5)+label(constraints,12,93,width-24,color('--graph-node-secondary'),10.5)+label(resultText,12,110,width-24,result?color('--syntax-type'):color('--graph-node-secondary'),11.5)+label((modifiers||[]).join(' '),12,127,width-24,color('--syntax-keyword'),10.5);
+    const detail=hasParameters?details:context.signature||'Parameters not recorded';
+    const content=label(title,12,45,width-24,color('--graph-node-text'),callableTitleSize(title,width-24),600)
+      +label(detail,12,63,width-24,color('--graph-node-secondary'),11)
+      +label(constraints,12,80,width-24,color('--graph-node-secondary'),10.5)
+      +label(resultText,12,110,width-24,result?color('--syntax-type'):color('--graph-node-secondary'),11.5)
+      +label((modifiers||[]).join(' '),12,127,width-24,color('--syntax-keyword'),10.5);
     return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><title>${xml(symbolKind(node)[0])}</title><g data-presentation="${group?'callable-frame':'callable-node'}"><path d="M0 0H${width}V${group?height:26}H0Z" fill="${color('--graph-node-header')}"/><path d="M0 26H${width}${group?`M0 ${height-.5}H${width}`:''}" stroke="${color('--graph-node-divider')}"/>${heading}${accessoryArt(items,width,key=>color('--graph-'+key))}${content}</g></svg>`);
   }
 
@@ -360,7 +385,11 @@
     const languageMark=svgLanguageMark(node,10,7,color);
     const roleMark=svgRoleMark(node,accent,languageMark?34:10);
     const roleX=languageMark?62:38,items=nodeAccessories(node.id);
-    const svg=`<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${group?frameGeometry.headerHeight:cardSize.height}"><defs><clipPath id="card"><rect width="${width}" height="112" rx="7"/></clipPath></defs><g clip-path="url(#card)"><path d="M0 0H${width}V${group?frameGeometry.headerHeight:32}H0Z" fill="${color('node-header')}"/><path d="M0 32H${width}M0 ${group?frameGeometry.headerHeight-.5:88}H${width}" stroke="${color('node-divider')}"/>${roleMark}${label(role,roleX,21,width-roleX-(items?.length?56:32),11,600)}${languageMark}${accessoryArt(items,width,color)}${label(nodeTitle(node),12,54,width-24,22,600)}${label(context.detail,12,75,width-24,10,400,!!context.signature)}${label(footer,12,103,width-24,10,400,false,true)}</g></svg>`;
+    const declaration=ArchitectureLayout.isCallable(node)?callableDeclaration(node):undefined;
+    const title=declaration?.title??nodeTitle(node);
+    const detail=declaration?.hasParameters?[...(declaration.modifiers??[]),declaration.result?'→ '+declaration.result:''].filter(Boolean).join(' '):context.detail;
+    const titleSize=declaration?callableTitleSize(title,width-24):22;
+    const svg=`<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${group?frameGeometry.headerHeight:cardSize.height}"><defs><clipPath id="card"><rect width="${width}" height="112" rx="7"/></clipPath></defs><g clip-path="url(#card)"><path d="M0 0H${width}V${group?frameGeometry.headerHeight:32}H0Z" fill="${color('node-header')}"/><path d="M0 32H${width}M0 ${group?frameGeometry.headerHeight-.5:88}H${width}" stroke="${color('node-divider')}"/>${roleMark}${label(role,roleX,21,width-roleX-(items?.length?56:32),11,600)}${languageMark}${accessoryArt(items,width,color)}${label(title,12,54,width-24,titleSize,600,!!declaration)}${label(detail,12,75,width-24,10,400,!!context.signature||!!declaration)}${label(footer,12,103,width-24,10,400,false,true)}</g></svg>`;
     return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
   }
   function cardData(node,parents,nodes,groups){
@@ -1267,7 +1296,15 @@
       cy.on('drag','node',event=>{event.target.union(event.target.descendants()).connectedEdges().removeClass('routed direct');preserveFrameHeaders(event.target.ancestors());});
       cy.on('free','node',()=>{if(canvas?.active)canvas.geometry();});
       cy.on('tap','edge',event=>{if(view.canvas)inspectCanvasEdge(event.target.id());else {const edge=view.edges.find(item=>item.id===event.target.id());if(edge)inspectSourceEdge(edge);}});
-      cy.on('mouseover','node',event=>{if(!event.target.isParent()){edgeHoverNode=event.target.id();refreshEdgeFocus();}const node=view.nodes.find(n=>n.id===event.target.id());if(node)$('graph').title=[node.name,symbolKind(node)[0],languageName(node),typeof node.attributes?.['syntax.signature']==='string'?node.attributes['syntax.signature']:''].filter(Boolean).join(' · ');});
+      cy.on('mouseover','node',event=>{
+        if(!event.target.isParent()){edgeHoverNode=event.target.id();refreshEdgeFocus();}
+        const node=view.nodes.find(n=>n.id===event.target.id());
+        if(!node)return;
+        const signature=typeof node.attributes?.['syntax.signature']==='string'?node.attributes['syntax.signature']:'';
+        const callable=ArchitectureLayout.isCallable(node);
+        const title=callable?signature||callableDeclaration(node).title:node.name;
+        $('graph').title=[title,symbolKind(node)[0],languageName(node),callable?'':signature].filter(Boolean).join(' · ');
+      });
       cy.on('mouseout','node',event=>{if(edgeHoverNode&&edgeHoverNode!==event.target.id())return;edgeHoverNode=undefined;refreshEdgeFocus();$('graph').title='';});
       cy.on('mouseover','edge',event=>{event.target.addClass('hovered');$('graph').title=event.target.data('description');});
       cy.on('mouseout','edge',event=>{event.target.removeClass('hovered');$('graph').title='';});
