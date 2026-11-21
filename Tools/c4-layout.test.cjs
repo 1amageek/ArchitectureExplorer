@@ -22,22 +22,21 @@ test('expanding a system preserves exterior anchors and nested area membership',
   }
 });
 
-test('buses reach both object anchors and point toward the destination on the last approach',()=>{
+test('buses start on the source footprint and end at the target approach port',()=>{
   const nodes=['a','b','c','d'].map(id=>({id,name:id,kind:'application'}));
   const edges=nodes.flatMap(source=>nodes.map(target=>({
     id:source.id+'-'+target.id,source:source.id,target:target.id
   })));
   const {positions,paths}=C4Layout.plan(nodes,edges);
   assert.equal(paths.length,edges.length);
-  for(const {edge,points,arrowStart,arrowTip} of paths){
+  for(const {edge,points} of paths){
     const distance=(p,q)=>Math.max(Math.abs(p[0]-q[0]),Math.abs(p[1]-q[1]));
-    for(const [port,id] of [[points[0],edge.source],[points.at(-1),edge.target]]){
-      const center=positions.get(id);
-      assert.deepEqual(port,center);
-    }
-    const tip=points.at(-1);
-    assert.equal(distance(arrowTip,tip),3);
-    assert.equal(distance(arrowStart,tip),4);
+    const source=positions.get(edge.source),target=positions.get(edge.target);
+    const tip=points.at(-1),approach=points.at(-2);
+    assert(distance(points[0],source)<=1);
+    assert(distance(tip,target)>=3&&distance(tip,target)<=5);
+    const axis=tip[0]===approach[0]?1:0;
+    assert.equal(Math.sign(tip[axis]-approach[axis]),Math.sign(target[axis]-tip[axis]));
     if(edge.source!==edge.target)assert.notDeepEqual(points[0],points.at(-1));
     for(let i=1;i<points.length;i++){
       const [x,z]=points[i], [px,pz]=points[i-1];
@@ -45,6 +44,18 @@ test('buses reach both object anchors and point toward the destination on the la
       assert(x!==px||z!==pz);
     }
   }
+});
+
+test('slightly offset objects in nested C2 areas share a straight port-to-port connection',()=>{
+  const user={id:'person',name:'User',kind:'person',attributes:{'context.areas':[{id:'people',name:'People'}]}};
+  const system={id:'system',name:'System',kind:'softwareSystem',attributes:{'context.areas':[{id:'local',name:'Local'}],'context.containerCount':2}};
+  const children=['application','store'].map(id=>({id,name:id,attributes:{'context.owner':'system'}}));
+  const edges=[{id:'store-tasks',source:'application',target:'store'},{id:'use-app',source:'person',target:'application'}];
+  const plan=C4Layout.plan([user,system,...children],edges,system.id);
+  const source=plan.positions.get('person'),target=plan.positions.get('application');
+  assert.notEqual(source[1],target[1],'Nested area offsets put the object centers on different grid lines');
+  const points=plan.paths.find(path=>path.edge.id==='use-app').points;
+  assert.deepEqual(points,[[source[0],source[1]+1],[target[0]-4,source[1]+1]]);
 });
 
 test('object captions shorten above the silhouette and their center stays over the object',()=>{

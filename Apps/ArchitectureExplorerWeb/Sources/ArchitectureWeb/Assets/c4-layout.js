@@ -144,46 +144,79 @@ globalThis.C4Layout = (() => {
       const a=positions.get(edge.source), b=positions.get(edge.target);
       if (!a||!b) continue;
       const options=[];
-      // A port must approach along one grid axis. Turning inside the object's
-      // clearance can put the arrow behind the raised mesh in this projection.
-      function offAxisInsideFootprint(x,z,center,id) {
-        const dx=Math.abs(x-center[0]), dz=Math.abs(z-center[1]);
-        return objects.has(id)&&dx>0&&dz>0&&Math.max(dx,dz)<portRadius;
+      const sourceObject=objects.has(edge.source),targetObject=objects.has(edge.target);
+      // Preserve a visible straight segment before the target port, even when
+      // the search falls back to walking the lattice.
+      function offAxis(x,z,center,radius) {
+        const dx=Math.abs(x-center[0]),dz=Math.abs(z-center[1]);
+        return dx>0&&dz>0&&Math.max(dx,dz)<=radius;
       }
       function permitted(x,z) {
-        if(offAxisInsideFootprint(x,z,a,edge.source)||offAxisInsideFootprint(x,z,b,edge.target))return false;
-        return !blocked.has(key(x,z))||Math.max(Math.abs(x-a[0]),Math.abs(z-a[1]))<=clearance||
-          Math.max(Math.abs(x-b[0]),Math.abs(z-b[1]))<=clearance;
+        if(sourceObject&&offAxis(x,z,a,clearance)||targetObject&&offAxis(x,z,b,portRadius))return false;
+        return !blocked.has(key(x,z))||sourceObject&&Math.max(Math.abs(x-a[0]),Math.abs(z-a[1]))<=clearance||
+          targetObject&&Math.max(Math.abs(x-b[0]),Math.abs(z-b[1]))<=clearance;
       }
-      function candidate(points) {
-        const steps=[], vertices=[points[0]];
-        let score=0;
-        for(let i=1;i<points.length;i++) {
-          const [x,z]=points[i-1],[ex,ez]=points[i],dx=Math.sign(ex-x),dz=Math.sign(ez-z);
+      function candidate(points,direct=false,setback=0) {
+        if(direct&&blocked.has(key(...points.at(-1))))return;
+        const vertices=[points[0]];
+        for(const point of points.slice(1)){
+          const [x,z]=vertices.at(-1),dx=point[0]-x,dz=point[1]-z;
+          if(dx&&dz)return;
+          if(!dx&&!dz)continue;
+          const previous=vertices.at(-2);
+          if(previous&&(dx&&previous[1]===z||dz&&previous[0]===x)){
+            if(dx*(x-previous[0])+dz*(z-previous[1])<0)return;
+            vertices[vertices.length-1]=point;
+          }else vertices.push(point);
+        }
+        if(vertices.length<2)return;
+        const steps=[];
+        let score=setback;
+        for(let i=1;i<vertices.length;i++) {
+          const [x,z]=vertices[i-1],[ex,ez]=vertices[i],dx=Math.sign(ex-x),dz=Math.sign(ez-z);
           const n=Math.abs(ex-x)+Math.abs(ez-z);
-          if(!n)continue;
-          vertices.push(points[i]);
+          const entry=!direct&&i===vertices.length-1&&targetObject?portRadius:0;
+          if(n<=entry)return;
           for(let j=0;j<n;j++) {
             const px=x+dx*j,pz=z+dz*j;
+            const insideSource=sourceObject&&Math.max(Math.abs(px-a[0]),Math.abs(pz-a[1]))<=clearance;
+            if(direct?blocked.has(key(px,pz))&&!insideSource:!permitted(px,pz))return;
+            if(j>=n-entry)continue;
             const step=key(px+dx/2,pz+dz/2);
-            if(!permitted(px,pz))return;
             steps.push(step); score+=1+(lanes.get(step)||0)*4;
           }
+          if(entry)vertices[i]=[ex-dx*entry,ez-dz*entry];
         }
-        if(!steps.length)return;
         const target=vertices.at(-1), approach=vertices.at(-2);
-        const length=Math.abs(target[0]-approach[0])+Math.abs(target[1]-approach[1]);
-        if(objects.has(edge.target)&&length<portRadius)return;
-        // A front-facing approach leaves the arrow visible below the raised glyph.
         const behind=approach[0]+approach[1]<target[0]+target[1];
         score+=(vertices.length-2)*2+(behind?4:0);
         options.push({points:vertices,steps,score});
+      }
+      function directRoutes(){
+        for(const axis of [0,1]){
+          const cross=1-axis,direction=Math.sign(b[axis]-a[axis]);
+          if(!direction)continue;
+          const sourceSpan=sourceObject?clearance-1:0,targetSpan=targetObject?clearance:0;
+          const low=Math.max(a[cross]-sourceSpan,b[cross]-targetSpan);
+          const high=Math.min(a[cross]+sourceSpan,b[cross]+targetSpan);
+          // Prefer the middle of the approach face, then spread shared lanes.
+          for(const lane of Array.from({length:Math.max(0,high-low+1)},(_,i)=>low+i).sort((l,r)=>Math.abs(l-b[cross])-Math.abs(r-b[cross]))){
+            const from=[...a],to=[...b];
+            from[cross]=to[cross]=lane;
+            // A rear diagonal moves toward the raised silhouette when both
+            // coordinates are lower than its center. Keep its arrow clear.
+            const setback=targetObject&&direction>0?Math.max(0,b[cross]-lane):0;
+            if(targetObject)to[axis]-=(portRadius+setback)*direction;
+            if(Math.sign(to[axis]-from[axis])===direction)candidate([from,to],true,setback);
+          }
+        }
       }
       if(a[0]===b[0]&&a[1]===b[1]) {
         const reach=portRadius+2;
         candidate([a,[a[0]+reach,a[1]],[a[0]+reach,a[1]+reach],[a[0],a[1]+reach],b]);
       } else {
-        for(const d of [0,-2,2,-3,3,-4,4]) {
+        directRoutes();
+        if(!options.length)for(const d of [0,-2,2,-3,3,-4,4]) {
           for(const x of [a[0]+d,b[0]+d])candidate([a,[x,a[1]],[x,b[1]],b]);
           for(const z of [a[1]+d,b[1]+d])candidate([a,[a[0],z],[b[0],z],b]);
         }
@@ -216,12 +249,7 @@ globalThis.C4Layout = (() => {
         route=options[0];
       }
       for(const s of route.steps)lanes.set(s,(lanes.get(s)||0)+1);
-      const points=route.points;
-      const [tx,tz]=points.at(-1),[px,pz]=points.at(-2);
-      const gap=objects.has(edge.target)?portRadius:0;
-      const dx=Math.sign(tx-px),dz=Math.sign(tz-pz);
-      const arrowTip=[tx-dx*gap,tz-dz*gap];
-      paths.push({edge,points,arrowTip,arrowStart:[arrowTip[0]-dx,arrowTip[1]-dz]});
+      paths.push({edge,points:route.points});
     }
     function visibleAreas(ids){
       const result=new Set();

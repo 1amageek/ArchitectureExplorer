@@ -29,7 +29,7 @@ globalThis.C4Map = class {
     const pattern=svg('pattern',{id:'c4-grid',patternUnits:'userSpaceOnUse',width:Math.sqrt(2)*24,height:48/Math.sqrt(6)},defs);
     const w=Math.sqrt(2)*24,h=48/Math.sqrt(6);
     svg('path',{d:'M0,0 L'+w+','+h+' M0,'+h+' L'+w+',0',class:'c4-grid'},pattern);
-    const marker=svg('marker',{id:'c4-arrow',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:5,markerHeight:5,orient:'auto'},defs);
+    const marker=svg('marker',{id:'c4-arrow',viewBox:'0 0 10 10',refX:10,refY:5,markerWidth:5,markerHeight:5,orient:'auto'},defs);
     svg('path',{d:'M0 0 L10 5 L0 10 Z',fill:'context-stroke'},marker);
     const glyphs=svg('g',{},defs);
     const subject=view.extensions?.['c4.container']?.subject;
@@ -96,13 +96,11 @@ globalThis.C4Map = class {
       const segments=[2,1].map(i=>({a:points[i],b:points[i+1]}));
       label(item.id,item.name,'area-label',()=>{if(node)actions.node(node);},{corners:points,outline,segments},node);
     }
-    for(const {edge,points,arrowStart,arrowTip} of plan.paths){
+    for(const {edge,points} of plan.paths){
       const projected=points.map(p=>project(...p));
       const d='M'+projected.join(' L');
       const g=svg('g',{class:'c4-route'},routes);
-      const path=svg('path',{d,class:'c4-line'},g);
-      svg('path',{d:'M'+project(...arrowStart)+' L'+project(...arrowTip),class:'c4-line',
-        'marker-end':'url(#c4-arrow)','pointer-events':'none'},g);
+      const path=svg('path',{d,class:'c4-line','marker-end':'url(#c4-arrow)'},g);
       svg('path',{d,class:'c4-hit'},g);
       const name=edge.attributes?.['context.operation']||edge.kind;
       describe(g,edge.id,name);

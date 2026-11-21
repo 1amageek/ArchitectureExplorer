@@ -133,8 +133,11 @@ their directed connections; stable identifiers break ties. Route cost accounts
 for bends, shared lanes and the final approach to the raised target. Layout
 never reverses a relationship or changes membership.
 On expansion the subject becomes the area for its containers. Paths reach the
-object ground anchors. Direction arrows stay at the approach port where the
-raised silhouette cannot hide them.
+object ports on the floor grid. Objects on a shared clear grid line can use
+ports along their facing sides to connect directly. An obstacle can require
+an elbow or a detour. Connectors approach the target along the last straight
+segment and draw their arrow at that segment's endpoint outside the footprint.
+The stroke, hit area and directional animation use the same path.
 
 The shared renderer uses an orthographic Three.js camera and five primitives:
 grid, object, area, path, label. Geometry and placement are presentation state.
