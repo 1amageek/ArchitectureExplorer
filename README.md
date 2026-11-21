@@ -4,7 +4,7 @@ Architecture Explorer is a local, read-only workspace browser for Swift and Rust
 
 ## Quick start
 
-Use Swift 6.4.1, Python 3, and macOS 27 or later on Apple Silicon. From the Explorer checkout, build the paired CLI and browser helper, then point them at the repository you want to explore.
+Use Swift 6.4.1, Python 3, and macOS 27 or later on Apple Silicon. From an Explorer checkout at tag `0.1.0`, build the paired CLI and browser helper, then point them at the repository you want to explore.
 
 ```sh
 python3 Tools/build.py

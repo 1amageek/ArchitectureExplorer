@@ -54,7 +54,7 @@ public struct SkeletonFrontend: FrontendProvider {
         entityRevision: input.digest, anchor: input.anchor(0, input.bytes.count),
         attributes: [
           "skeleton.blockCount": .number(Double(skeleton.blocks.count)),
-          "skeleton.revision": .string("fb10ef666a30e892b9f3a4ca0740702c6c621d80"),
+          "skeleton.revision": .string("1215a3bd86d172e07151c7ccc9a213cb6ea27434"),
         ])
     ]
     var facts: [Fact] = []

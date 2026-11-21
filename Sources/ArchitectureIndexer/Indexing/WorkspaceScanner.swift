@@ -143,7 +143,7 @@ public struct WorkspaceScanner: Sendable {
       }
     }
     inputs["@configuration"] = configuration.digest
-    inputs["@provider"] = "skeleton-fb10ef6+tree-sitter-0.25.0+syntax-v8"
+    inputs["@provider"] = "skeleton-1215a3b+tree-sitter-0.25.0+syntax-v8"
     inputs["@designDocuments"] = "markdown-v1"
     inputs["@indexer"] = "snapshot-lifecycle-v2"
     inputs["@c4"] = "backstage-v3+structurizr-v7"

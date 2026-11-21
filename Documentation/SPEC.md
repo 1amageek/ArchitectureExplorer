@@ -140,7 +140,7 @@ ArchitectureExplorer/
 確認時の参照点：
 
 ```text
-swift-skeleton: fb10ef666a30e892b9f3a4ca0740702c6c621d80
+swift-skeleton: 1215a3bd86d172e07151c7ccc9a213cb6ea27434
 swift-web:      6edadb6cfa92e3a4b26a1e669329be38f45212f4
 ```
 
@@ -1085,9 +1085,9 @@ ArchitectureExplorer/
 
 ### [R1] swift-skeleton：README、Trust boundary、公開Library使用例
 
-参照commit：`fb10ef666a30e892b9f3a4ca0740702c6c621d80`。宣言抽出、複数言語、本文非保持、意味解決・正しさの保証対象外を確認した。
+参照commit：`1215a3bd86d172e07151c7ccc9a213cb6ea27434`。宣言抽出、複数言語、本文非保持、意味解決・正しさの保証対象外を確認した。
 
-`https://github.com/1amageek/swift-skeleton/blob/fb10ef666a30e892b9f3a4ca0740702c6c621d80/README.md`
+`https://github.com/1amageek/swift-skeleton/blob/1215a3bd86d172e07151c7ccc9a213cb6ea27434/README.md`
 
 ### [R2] SwiftWeb：README
 

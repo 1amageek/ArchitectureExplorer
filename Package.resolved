@@ -1,12 +1,13 @@
 {
-  "originHash" : "dba97f9e1d792928d639efb24fa67fd601608113b3528232bfce0c7b67119241",
+  "originHash" : "3b39434c88b3eed7da36f5c038dc9fcebb712bb06e8feb9d24a0dddb6f32951f",
   "pins" : [
     {
       "identity" : "swift-skeleton",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/1amageek/swift-skeleton.git",
       "state" : {
-        "revision" : "fb10ef666a30e892b9f3a4ca0740702c6c621d80"
+        "revision" : "1215a3bd86d172e07151c7ccc9a213cb6ea27434",
+        "version" : "0.5.0"
       }
     },
     {

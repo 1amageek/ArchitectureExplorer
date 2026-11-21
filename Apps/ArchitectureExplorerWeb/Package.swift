@@ -9,11 +9,11 @@ let package = Package(
     .executable(name: "architecture-web", targets: ["architecture-web"]),
   ],
   dependencies: [
-    .package(path: "../.."),
+    .package(url: "https://github.com/1amageek/ArchitectureExplorer.git", exact: "0.1.0"),
     .package(
       url: "https://github.com/1amageek/swift-web.git",
       revision: "6edadb6cfa92e3a4b26a1e669329be38f45212f4"),
-    .package(url: "https://github.com/1amageek/swift-html.git", from: "0.16.1"),
+    .package(url: "https://github.com/1amageek/swift-html.git", exact: "0.16.1"),
     .package(url: "https://github.com/apple/swift-collections.git", exact: "1.7.1"),
     .package(url: "https://github.com/apple/swift-http-api-proposal.git", exact: "0.3.0"),
     .package(url: "https://github.com/swift-server/swift-http-server", exact: "0.1.0"),

@@ -16,7 +16,7 @@ let package = Package(
     .package(url: "https://github.com/jpsim/Yams.git", exact: "6.2.2"),
     .package(
       url: "https://github.com/1amageek/swift-skeleton.git",
-      revision: "fb10ef666a30e892b9f3a4ca0740702c6c621d80", traits: ["rust"]),
+      exact: "0.5.0", traits: ["rust"]),
     .package(url: "https://github.com/tree-sitter/swift-tree-sitter.git", exact: "0.25.0"),
   ],
   targets: [

@@ -13,3 +13,6 @@ Examples/*/Package.resolved
 # Machine-local verification output
 /Verification/**/*.log
 /Documentation/sourcekit-probe.json
+
+# The consumer resolves this repository's published tag.
+/Apps/ArchitectureExplorerWeb/Package.resolved
