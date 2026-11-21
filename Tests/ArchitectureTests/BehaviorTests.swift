@@ -96,6 +96,73 @@ struct BehaviorTests {
       try GraphValidation.validate(snapshot(result))
     }
   }
+
+  @Test(.timeLimit(.minutes(1))) func entryGraphShowsDirectReferencesAcrossDeclaredSwiftTargets() async throws {
+    let root = try temp()
+    defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+    func write(_ path: String, _ contents: String) throws {
+      let file = root.appendingPathComponent(path)
+      try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try Data(contents.utf8).write(to: file, options: .atomic)
+    }
+    func manifest(dependencies: String) throws {
+      try write("Package.swift", """
+        // swift-tools-version: 6.4
+        import PackageDescription
+        let package = Package(name: "Example", targets: [
+          .executableTarget(name: "App", dependencies: \(dependencies)),
+          .target(name: "Core"),
+          .target(name: "Unimported"),
+          .target(name: "Undeclared")
+        ])
+        """)
+    }
+    try manifest(dependencies: #"["Core", .target(name: "Unimported")]"#)
+    try write("Sources/App/Entry.swift", """
+      import Core
+      import Undeclared
+      struct Entry {
+        var store = Store(repository: TaskRepository())
+        var view = Workspace()
+        var unrelated = ImportedWithoutDependency()
+        var hidden = DeclaredWithoutImport()
+      }
+      """)
+    try write("Sources/App/Workspace.swift", "struct Workspace {}\nstruct Aardvark {}\nstruct Another {}")
+    try write("Sources/Core/Store.swift", "struct Store {}\nstruct TaskRepository {}")
+    try write("Sources/Unimported/Hidden.swift", "struct DeclaredWithoutImport {}\nstruct Store {}")
+    try write("Sources/Undeclared/Hidden.swift", "struct ImportedWithoutDependency {}\nstruct Store {}")
+    let paths = try WorkspacePaths(root.path)
+    let store = try SQLiteGraphStore(path: root.appendingPathComponent("index.db").path, workspaceID: paths.workspaceID)
+    let indexer = WorkspaceIndexer(paths: paths, store: store)
+    let snapshot = try await indexer.reconcile()
+    let entry = try #require(snapshot.entities.first { $0.name == "Entry" })
+    let query = GraphQuery(method: "graph.overview", focus: entry.id, limit: 4, level: "component")
+    let engine = GraphEngine()
+    let view = try engine.view(query, snapshot: snapshot)
+    let expected: Set<String> = ["Store", "TaskRepository", "Workspace"]
+    #expect(Set(view.nodes.map(\.name)) == expected.union(["Entry"]))
+    #expect(view.extensions?["implementation.scope"]?.string == "Module · App")
+    #expect(view.truncated && view.nextCursor != nil)
+    let names = Dictionary(uniqueKeysWithValues: view.nodes.map { ($0.id, $0.name) })
+    let references = view.edges.filter { $0.source == entry.id && $0.kind == "candidateTypeReference" }
+    #expect(Set(references.compactMap { names[$0.target] }) == expected)
+    let crossModule = try #require(references.first { names[$0.target] == "Store" })
+    #expect(crossModule.attributes["reference.site"]?["line"].int == 4)
+    #expect(crossModule.attributes["reference.scope"]?.string == "Core")
+    #expect(view.evidence.contains { crossModule.evidenceIDs.contains($0.id) && $0.anchor?.path == "Package.swift" })
+    let modules = try engine.view(GraphQuery(method: "graph.overview", level: "module"), snapshot: snapshot)
+    let app = try #require(modules.nodes.first { $0.name == "App" })
+    let core = try #require(modules.nodes.first { $0.name == "Core" })
+    #expect(modules.edges.contains { $0.kind == "dependsOn" && $0.source == app.id && $0.target == core.id })
+
+    try manifest(dependencies: #"["Unimported"]"#)
+    let changed = try await indexer.reconcile()
+    let after = try engine.view(query, snapshot: changed)
+    #expect(after.edges.filter { $0.source == entry.id && $0.kind == "candidateTypeReference" }.map { $0.attributes["reference.scope"]?.string } == ["App"])
+    let pinned = try await indexer.snapshot(snapshot.id)
+    #expect(try engine.view(query, snapshot: pinned).edges == view.edges)
+  }
   @Test(.timeLimit(.minutes(1))) func declarationRolesDistinguishTypesAndCallables() throws {
     let swift = try SkeletonFrontend().analyze(input("""
       class Reference {

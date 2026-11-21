@@ -45,6 +45,12 @@ public struct GraphEngine: GraphQuerying {
     }
     let deadline = ContinuousClock.now.advanced(by: .milliseconds(200))
     var workTruncated = false
+    let componentOverview = query.method == "graph.overview" && query.level == "component"
+    let includeTypeReferences = (fileOutline || componentOverview)
+      && (query.kinds.isEmpty || query.kinds.contains("candidateTypeReference"))
+    var prioritized = Set<String>()
+    var entryReferences: [Fact] = []
+    var typeReferences: TypeReferenceProjection?
     func selectOutline(_ roots: [String], includeRoots: Bool) {
       let excluded: Set<String> = ["callSite", "basicBlock", "unresolvedSymbol", "externalSymbol"]
       let children = Dictionary(grouping: containment, by: \.source)
@@ -135,6 +141,22 @@ public struct GraphEngine: GraphQuerying {
         }
         for fact in snapshot.facts where query.level == "component" && fact.kind == "memberOf" && entities[fact.target]?.kind == "designGroup" {
           if let path = entities[fact.source]?.anchor?.path, paths.contains(path) { selected.insert(fact.target) }
+        }
+        if componentOverview {
+          prioritized.insert(entryID)
+          if includeTypeReferences {
+            typeReferences = TypeReferenceProjection(snapshot: snapshot, entities: entities, deadline: deadline)
+            if let typeReferences {
+              let references = typeReferences.edges(visible: nil, nodes: [entry], entities: entities,
+                parents: outlineParents, budget: query.edgeLimit, deadline: deadline)
+              entryReferences = references.facts
+              prioritized.formUnion(entryReferences.map(\.target))
+              selected.formUnion(prioritized)
+              workTruncated = references.truncated
+            } else {
+              workTruncated = true
+            }
+          }
         }
       }
       if contextView, let subject = contextSubject {
@@ -240,8 +262,13 @@ public struct GraphEngine: GraphQuerying {
       throw ArchitectureError(
         "UNSUPPORTED_CAPABILITY", "Unknown graph query: \(query.method)", exitCode: 3)
     }
-    let filtered = ordered.filter {
+    var filtered = ordered.filter {
       selected.contains($0.id) && (query.languages.isEmpty || query.languages.contains($0.language))
+    }
+    if !prioritized.isEmpty {
+      let entry = filtered.filter { $0.id == query.focus }
+      let targets = filtered.filter { $0.id != query.focus && prioritized.contains($0.id) }
+      filtered = entry + targets + filtered.filter { !prioritized.contains($0.id) }
     }
     let signature = try CanonicalJSON.encode([
       "method": JSONValue.string(query.method), "focus": query.focus.map(JSONValue.string) ?? .null,
@@ -348,19 +375,27 @@ public struct GraphEngine: GraphQuerying {
             ]))
       }
     }
-    if fileOutline || (query.method == "graph.overview" && query.level == "component"),
-      query.kinds.isEmpty || query.kinds.contains("candidateTypeReference") {
-      let references = TypeReferenceProjection.edges(snapshot: snapshot, visible: visible,
-        nodes: nodes, entities: entities, parents: outlineParents, budget: query.edgeLimit,
-        deadline: deadline)
-      projected.append(contentsOf: references.facts)
-      workTruncated = workTruncated || references.truncated
+    if includeTypeReferences {
+      if let projection = prioritized.isEmpty
+        ? TypeReferenceProjection(snapshot: snapshot, entities: entities, deadline: deadline) : typeReferences {
+        let direct = entryReferences.filter { visible.contains($0.source) && visible.contains($0.target) }
+        projected.append(contentsOf: direct)
+        let references = projection.edges(visible: visible, nodes: nodes.filter { prioritized.isEmpty || $0.id != query.focus },
+          entities: entities, parents: outlineParents, budget: query.edgeLimit - direct.count, deadline: deadline)
+        projected.append(contentsOf: references.facts)
+        workTruncated = workTruncated || references.truncated
+      } else {
+        workTruncated = true
+      }
     }
     if fileOutline && projected.filter({ $0.kind == "contains" }).count > query.edgeLimit {
       throw ArchitectureError("RESOURCE_LIMIT", "Edge budget cannot fit the file outline's structural context.", exitCode: 6)
     }
     projected.sort {
       if fileOutline && ($0.kind == "contains") != ($1.kind == "contains") { return $0.kind == "contains" }
+      if componentOverview, let entry = query.focus, ($0.source == entry) != ($1.source == entry) {
+        return $0.source == entry
+      }
       return $0.id < $1.id
     }
     let edges = Array(projected.prefix(query.edgeLimit))

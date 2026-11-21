@@ -102,6 +102,9 @@ public struct WorkspaceScanner: Sendable {
       if catalog {
         catalogs.append(SourceInput(workspaceID: paths.workspaceID, path: relative, language: "catalog", bytes: data, contextDigest: configuration.digest, generation: generation))
       }
+      if url.lastPathComponent == "Package.swift" {
+        catalogs.append(SourceInput(workspaceID: paths.workspaceID, path: relative, language: "swift", bytes: data, contextDigest: configuration.digest, generation: generation))
+      }
       if let language = sourceLanguage, url.lastPathComponent != "Package.swift" {
         sources.append(
           SourceInput(
@@ -147,6 +150,7 @@ public struct WorkspaceScanner: Sendable {
     inputs["@designDocuments"] = "markdown-v1"
     inputs["@indexer"] = "snapshot-lifecycle-v2"
     inputs["@c4"] = "backstage-v3+structurizr-v7"
+    inputs["@swiftpm"] = "literal-manifest-v1"
     inputs["@cfg"] = ControlFlowProvider.version
     inputs["@toolchain"] = "swift-6.4.1"
     return (sources.sorted { $0.path < $1.path }, catalogs.sorted { $0.path < $1.path }, inputs, diagnostics)

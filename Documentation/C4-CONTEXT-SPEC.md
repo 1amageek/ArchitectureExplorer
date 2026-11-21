@@ -173,12 +173,14 @@ Offsets are half-open UTF-8 bytes. Explorer resolves this link only to a
 unique indexed declaration of that kind and range in that exact current input
 of the pinned snapshot. Ordinary citation comments do not establish a link.
 
-Open components switches to the standard source graph. It displays recorded
-design groups and implementation types in the indexed module owning the entry
-file, or only the entry file when unique module ownership is unavailable.
-The scope is identified on screen. A type by itself does not establish an
-architectural responsibility. Open code follows recorded source containment
-at the same snapshot. Missing or stale bindings leave the container inspectable.
+Open components switches to the source graph at the indexed entry declaration.
+The initial page prioritizes the entry and the types it directly references,
+including candidates outside the entry file. The graph identifies the entry's
+recorded module when available, with the entry file as the fallback scope.
+Cross-module Swift candidates require a direct recorded module dependency and
+an explicit import in the source file. Their edges remain lexical candidates
+with source evidence. Open code follows recorded source containment in the same
+snapshot. Missing or stale entry bindings leave the container inspectable.
 
 ### Map objects
 

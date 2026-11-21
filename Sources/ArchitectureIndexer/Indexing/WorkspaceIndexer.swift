@@ -146,7 +146,8 @@ public actor WorkspaceIndexer {
       }
       let retainedFacts = old.facts.filter { fact in
         if deletedEndpoint(fact.source) || deletedEndpoint(fact.target) { return false }
-        if [CatalogContext.producer, StructurizrContext.producer].contains(fact.producer) { return false }
+        if [CatalogContext.producer, StructurizrContext.producer, SwiftPMManifest.producer].contains(fact.producer) { return false }
+        if fact.producer == "project.metadata", old.contextDigest != contextDigest { return false }
         if fact.producer == provider.identity { return retainedPaths.contains(fact.scope) }
         if fact.producer == "project.filesystem" || fact.producer == "design.configuration" {
           return false
@@ -244,11 +245,29 @@ public actor WorkspaceIndexer {
       packages.append((directory, package))
       containment(root.id, package.id)
     }
+    var filesByPackage: [String: [Entity]] = [:]
     for node in Array(nodeMap.values) where node.kind == "file" {
       let package = packages.filter { $0.0.isEmpty || node.name.hasPrefix($0.0 + "/") }.max {
         $0.0.count < $1.0.count
       }?.1
       containment(package?.id ?? root.id, node.id)
+      if let package { filesByPackage[package.id, default: []].append(node) }
+    }
+    let evaluatedManifests = Set(factMap.values.filter { $0.producer == "project.metadata" }.map(\.scope))
+    let manifestInputs = Dictionary(uniqueKeysWithValues: captured.catalogs.filter { $0.language == "swift" }.map { ($0.path, $0) })
+    for (_, package) in packages {
+      guard let manifest = package.attributes["project.manifest"]?.string, !evaluatedManifests.contains(manifest),
+        let input = manifestInputs[manifest] else { continue }
+      do {
+        let result = try SwiftPMManifest.analyze(input, package: package, files: filesByPackage[package.id, default: []], contextDigest: contextDigest)
+        for entity in result.entities { nodeMap[entity.id] = entity }
+        for fact in result.facts { factMap[fact.id] = fact }
+        for item in result.evidence { evidenceMap[item.id] = item }
+        coverage.append(result.coverage)
+      } catch let error as ArchitectureError {
+        coverage.append(Coverage(producer: SwiftPMManifest.producer, scope: manifest, language: "swift", completeness: "failed",
+          diagnostics: [Diagnostic(error.code, error.message, scope: manifest)]))
+      }
     }
     for group in configuration.value["designGroups"].array {
       guard let id = group["id"].string, let label = group["label"].string else {
@@ -379,10 +398,17 @@ public actor WorkspaceIndexer {
     defer { reconciling = false }
     let producer = result.coverage.producer
     let scope = result.coverage.scope
-    let replaced = checked.facts.filter { $0.producer == producer && $0.scope == scope }
+    let evaluated = Set(result.facts.map(\.scope))
+    func replaces(_ fact: Fact) -> Bool {
+      if producer == "project.metadata" {
+        return fact.producer == producer || (fact.producer == SwiftPMManifest.producer && evaluated.contains(fact.scope))
+      }
+      return fact.producer == producer && fact.scope == scope
+    }
+    let replaced = checked.facts.filter(replaces)
     let oldOwned = Set(replaced.map(\.target)).subtracting(
       Set(
-        checked.facts.filter { !($0.producer == producer && $0.scope == scope) }.flatMap {
+        checked.facts.filter { !replaces($0) }.flatMap {
           [$0.source, $0.target]
         }))
     var entities = Dictionary(
@@ -395,11 +421,14 @@ public actor WorkspaceIndexer {
       id: UUID().uuidString, workspaceID: checked.workspaceID, generation: generation,
       contextDigest: checked.contextDigest, inputs: checked.inputs,
       entities: entities.values.sorted { $0.id < $1.id },
-      facts: checked.facts.filter { !($0.producer == producer && $0.scope == scope) }
+      facts: checked.facts.filter { !replaces($0) }
         + result.facts,
       evidence: checked.evidence.filter { !Set(replaced.flatMap(\.evidenceIDs)).contains($0.id) }
         + result.evidence,
-      coverage: checked.coverage.filter { !($0.producer == producer && $0.scope == scope) } + [
+      coverage: checked.coverage.filter { item in
+        !(item.producer == producer && item.scope == scope)
+          && !(producer == "project.metadata" && item.producer == SwiftPMManifest.producer && evaluated.contains(item.scope))
+      } + [
         result.coverage
       ], diagnostics: checked.diagnostics)
     try await store.publish(next)

@@ -323,6 +323,22 @@ test('compound rendering keeps every fact in List and retains routes and manual 
 });
 
 const settle=()=>new Promise(setImmediate);
+test('the focused source canvas opens with all direct references in frame',async t=>{
+  const from='entry',targets=['store','repository','workspace'];
+  const nodes=[entity(from,'type'),...targets.map(id=>entity(id,'type'))];
+  const edges=targets.map(target=>({id:'ref-'+target,source:from,target,kind:'candidateTypeReference'}));
+  const query={method:'graph.overview',level:'component',focus:from};
+  const page=await render(nodes,edges,false,{extensions:{'implementation.scope':'Module · App'},
+    state:{architectureExplorer:1,index:1,level:'component',query}});
+  t.after(()=>page.cy.destroy());
+  page.cy.width=()=>550;
+  page.cy.height=()=>700;
+  const model=require(path.join(assets,'layout-model.js')),ELK=require(path.join(assets,'elk.bundled.js'));
+  page.worker.onmessage({data:await model.layout(page.worker.message,new ELK())});
+  const bounds=page.cy.nodes().renderedBoundingBox();
+  assert.ok(bounds.x1>=24&&bounds.x2<=526&&bounds.y1>=24&&bounds.y2<=676,
+    'The entry and every direct dependency fit the initial viewport');
+});
 const requestedQuery=page=>JSON.parse(new URL('http://localhost'+page.networkRequests.filter(url=>url.startsWith('/api?')&&JSON.parse(new URL('http://localhost'+url).searchParams.get('params')).method).at(-1)).searchParams.get('params'));
 test('the live footer shows the full workspace path independently of graph navigation',async t=>{
   const workspaceRoot='/work/Projects & <Examples>/App';

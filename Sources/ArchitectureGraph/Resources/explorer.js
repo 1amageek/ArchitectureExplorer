@@ -492,9 +492,17 @@
     cy.fit(targets,24);
     cy.zoom(Math.min(1,Math.max(0.55,cy.zoom())));cy.center(targets);
   }
-  function fitCanvas(padding=75){cy.fit(undefined,padding);if(cy.zoom()>1){cy.zoom(1);cy.center();}}
+  function fitCanvas(padding=75,elements){cy.fit(elements,padding);if(cy.zoom()>1){cy.zoom(1);cy.center(elements);}}
   function openCanvas(){
     if(!cy.nodes().length)return;
+    if(query.method==='graph.overview'&&query.level==='component'&&query.focus&&view.extensions?.['implementation.scope']){
+      const entry=cy.getElementById(query.focus);
+      const references=entry.outgoers('edge[relation = "candidate-types"]');
+      if(references.length){
+        fitCanvas(40,entry.union(references).union(references.targets()));
+        return;
+      }
+    }
     fitCanvas(40);
     if(cy.zoom()<.75&&view.edges.some(edge=>edge.kind==='candidateTypeReference')){
       const references=cy.edges('[relation = "candidate-types"]');

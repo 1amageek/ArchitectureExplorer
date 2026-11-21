@@ -167,6 +167,9 @@ A source node offers property analysis in a thread-bound built-in browser sessio
 An open node menu follows its anchor during layout and camera updates. Verify model enters a dedicated review screen before reading the published result or starting a confirmed action. The pending history entry pins the source snapshot and entity. The first graph replaces that entry, so Back returns directly to the originating view and camera. Leaving the screen detaches late replies. Restoring a pending entry can read results but requires a new user confirmation to dispatch work. An unavailable model shows the source selection and the terminal attempt diagnostic. Early clicks during intent preparation require confirmation in the review. A published formal graph opens directly.
 
 C4 rendering follows the [Map display contract](../../../../../Documentation/C4-CONTEXT-SPEC.md#map).
+Opening a container's source graph frames the entry declaration and its direct
+reference edges on the first layout. Browser history restores the saved camera
+for revisited views.
 The page mounts one diagram surface for a C4 query, owns its camera, and disposes
 its listeners and observer on navigation. Three.js projects local geometry on
 the shared grid. SVG hit targets carry original entity and relation IDs to the

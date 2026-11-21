@@ -19,6 +19,8 @@ Module composition -> Project -> immutable result or typed error
 ## Contracts and Invariants
 Inputs and outputs retain workspace, snapshot and provenance. Failures remain distinguishable from absence.
 
+Read-only SwiftPM analysis recognizes literal target declarations and local dependencies directly in a top-level `Package` initializer. Default file ownership requires a Swift file in that manifest's conventional `Sources/<target>` or `Tests/<target>` tree. Custom source selection and dynamic declarations leave the affected structure unresolved. Results carry syntax evidence and partial coverage. Explicit trusted metadata supersedes this producer for the manifests it resolves.
+
 ## State, Ownership, and Lifecycle
 Mutable database and indexing state is actor-isolated. Socket descriptors are single-owner scoped resources with exactly-once close. Trees and source bytes remain local to a parse; pointers never escape the parse scope. No state branches by target.
 
