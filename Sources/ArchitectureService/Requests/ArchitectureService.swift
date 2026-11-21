@@ -334,6 +334,24 @@ public actor ArchitectureService {
         collection: params["collection"].string ?? "entities", cursor: params["cursor"].string,
         limit: Self.integer(params, "limit", default: 100), maximumBytes: Self.integer(params, "maximumBytes", default: 1024 * 1024))
       return try JSONValue.encode(value)
+    case "workspace.specification":
+      try Self.snapshotParameters(params, strings: ["snapshotID"], integers: [])
+      let snapshot = try await indexer.snapshot(params["snapshotID"].string)
+      let path = "SPEC.md"
+      guard let digest = snapshot.inputs[path] else {
+        return .object(["status": .string("missing"), "snapshotID": .string(snapshot.id)])
+      }
+      let file = try paths.resolve(path)
+      let handle = try FileHandle(forReadingFrom: file)
+      defer { handle.closeFile() }
+      let bytes = try handle.read(upToCount: 256 * 1024 + 1) ?? Data()
+      guard bytes.count <= 256 * 1024, let text = String(data: bytes, encoding: .utf8) else {
+        throw ArchitectureError("SOURCE_UNAVAILABLE", "Specification must be UTF-8 and at most 256 KiB.", exitCode: 3)
+      }
+      guard CanonicalJSON.digest(bytes) == digest else {
+        throw ArchitectureError("STALE_ANALYSIS", "The specification on disk differs from this snapshot.", exitCode: 7)
+      }
+      return .object(["status": .string("available"), "path": .string(path), "digest": .string(digest), "snapshotID": .string(snapshot.id), "text": .string(text)])
     case "source.read":
       guard let entityID = params["entityID"].string else {
         throw ArchitectureError("INVALID_ARGUMENT", "Entity ID required.", exitCode: 2)

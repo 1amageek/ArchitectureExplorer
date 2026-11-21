@@ -76,7 +76,7 @@ struct ExplorerApp: App {
         return Response(status: .ok, headers: headers, body: .init(bytes: Array(bytes)))
       }
       let allowed: Set<String> = [
-        "canvas.list", "canvas.get", "canvas.export", "workspace.status", "graph.overview", "graph.children", "graph.node", "graph.neighbors",
+        "canvas.list", "canvas.get", "canvas.export", "workspace.status", "workspace.specification", "graph.overview", "graph.children", "graph.node", "graph.neighbors",
         "graph.search", "graph.path", "graph.impact", "graph.cfg", "graph.diff", "graph.explain",
         "graph.evidence", "graph.annotations", "graph.capabilities", "source.read", "events.poll",
         "graph.export", "extensionGraphs.list", "extensions.list", "extensions.pending", "extensions.view", "inputs.manifest",

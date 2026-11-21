@@ -63,6 +63,33 @@ struct SnapshotAccessTests {
     await access.shutdown()
     await #expect(throws: ArchitectureError.self) { try await access.snapshot(for: lease.id) }
   }
+  @Test(.timeLimit(.minutes(1))) func workspaceSpecificationIsAvailableBeforeCodeAndBoundToItsSnapshot() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+    let paths = try WorkspacePaths(root.path)
+    let store = try SQLiteGraphStore(path: root.appendingPathComponent("store.sqlite").path, workspaceID: paths.workspaceID)
+    let service = ArchitectureService(paths: paths, store: store)
+    defer { await service.shutdown() }
+    await service.refresh()
+    let empty = try await service.handle("workspace.specification", params: .object([:]))
+    #expect(empty["status"].string == "missing")
+    let file = root.appendingPathComponent("SPEC.md")
+    let original = "# Requirements\nSource-free specification.\n"
+    try Data(original.utf8).write(to: file)
+    await service.refresh()
+    let current = try await service.handle("workspace.specification", params: .object([:]))
+    #expect(current["text"].string == original)
+    #expect(current["snapshotID"] != empty["snapshotID"])
+    let graph = try await service.handle("graph.overview", params: .object(["level": .string("module")]))
+    #expect(graph["nodes"].array.map { $0["kind"].string } == ["workspace"])
+    try Data("Changed".utf8).write(to: file)
+    do {
+      _ = try await service.handle("workspace.specification", params: .object(["snapshotID": current["snapshotID"]]))
+      Issue.record("Changed file was returned for the old snapshot")
+    } catch let error as ArchitectureError { #expect(error.code == "STALE_ANALYSIS") }
+  }
+
   @Test(.timeLimit(.minutes(1))) func malformedRPCParametersCannotFallBackToCurrentInputs() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }

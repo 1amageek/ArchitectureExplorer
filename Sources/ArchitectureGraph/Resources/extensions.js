@@ -89,7 +89,7 @@
     modelCommand(host,entity,closeMenu){
       if(this.context.saved)return;
       const view=this.context.view();
-      const project=entity.kind==='softwareSystem'||!!entity.attributes?.['context.owner'];
+      const project=['workspace','softwareSystem'].includes(entity.kind)||!!entity.attributes?.['context.owner'];
       const command=button(project?'Verify project':'Verify model',()=>this.reviewModel(view,entity,availability,command.ready,closeMenu,project));
       command.dataset.icon='stateTransition';command.title='Checking verification availability…';host.append(command);
       const availability=(project?this.projectAvailability(view,entity):this.modelAvailability(view,entity)).then(model=>{
@@ -369,7 +369,9 @@
         for(const contribution of publication.contributions){
           const graph=contribution.kind==='graph'||(contribution.kind==='view'&&contribution.data.kind==='graph');
           const model=graph&&window.ArchitectureCanvasModel.formalModel(contribution.data);
-          if(!model&&!filter.nodeMenu&&!(filter.entity&&contribution.kind==='annotation'))continue;
+          const report=graph&&contribution.data.metadata?.verificationReport;
+          if(filter.projectOnly&&!report)continue;
+          if(!model&&!report&&!filter.nodeMenu&&!(filter.entity&&contribution.kind==='annotation'))continue;
           if(filter.entity&&!contribution.binding.entityIDs.includes(filter.entity))continue;
           if(filter.fact&&!contribution.binding.factIDs.includes(filter.fact))continue;
           const label=contribution.data.title||contribution.data.claim;
@@ -404,7 +406,7 @@
       }
       item.onCount?.(links.childNodes.length);
       if(links.childNodes.length){
-        if(!filter.nodeMenu)slot.append(node('h3',filter.entity?'Published evidence':filter.text?'Models':'Open model'));
+        if(!filter.nodeMenu)slot.append(node('h3',filter.projectOnly?'Project verification':filter.entity?'Published evidence':filter.text?'Models':'Open model'));
         slot.append(links);
       }
       if(page.nextCursor)slot.append(button('More published models…',async()=>{

@@ -1024,6 +1024,9 @@
     next=await rpc(query.method,query);
     if(serial!==request)return;
     if(!next.nodes)throw Error('The selected API did not return a graph view.');
+    if(!saved&&navigation?.index===0&&query.method==='graph.overview'&&query.level==='context'&&!query.snapshotID&&!next.nodes.length){
+      go({method:'graph.overview',level:'module'},true);return;
+    }
     const nextHierarchy=await readHierarchy(next,query);if(serial!==request)return;
     if(external?.review&&external.review.view.snapshotID!==next.snapshotID)external.closeModel();
     if(!refresh||view?.snapshotID!==next.snapshotID)logGraph(next,'Loaded '+query.method);
@@ -1419,6 +1422,23 @@
     const serial=++inspection;selectedFact=undefined;selected=node;c4Map?.select(node.id);if(cy){cy.elements().unselect();cy.nodes().removeClass('reference-endpoint');cy.getElementById(node.id).select();}
     for(const entry of document.querySelectorAll('[data-entity-id]')){const active=entry.dataset.entityId===node.id;entry.classList.toggle('active',active);entry.setAttribute('aria-pressed',String(active));}
     const box=$('inspector');box.replaceChildren(...inspectorBadges(node),text('h2',nodeTitle(node)));
+    if(!saved&&node.kind==='workspace'){
+      const snapshotID=view.snapshotID;
+      const specification=text('section','','workspace-specification');
+      const status=text('p','Loading specification…','subtle');status.setAttribute('role','status');
+      specification.append(text('h3','Specification'),status);box.append(specification);
+      external?.modelCommand(box,node,()=>{});
+      external?.modelSlot(box,{entity:node.id,projectOnly:true});
+      try{
+        const result=await rpc('workspace.specification',{snapshotID});
+        if(serial!==inspection||selected?.id!==node.id||snapshotID!==view.snapshotID)return;
+        if(result.status==='missing'){status.textContent='No SPEC.md recorded in this workspace.';return;}
+        const detail=document.createElement('details');detail.open=true;
+        const content=text('pre',result.text);content.style.whiteSpace='pre-wrap';
+        detail.append(text('summary',result.path),content);status.replaceWith(detail);
+      }catch(error){if(serial===inspection&&selected?.id===node.id)status.textContent=error.message;}
+      return;
+    }
     if(!saved&&!c4Map&&external){
       const verification=text('section','','selection-verification');verification.append(text('h3','Verification'));
       external.modelCommand(verification,node,()=>{});
