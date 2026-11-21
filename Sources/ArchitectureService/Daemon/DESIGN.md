@@ -33,3 +33,5 @@ Requests and sources have explicit byte limits and deadlines. Cancellation close
 The daemon.stop response is sent before the accept loop sees the stop flag. Cleanup therefore cannot cancel its own shutdown acknowledgement. After the frame is sent, the Service stop flag changes and owned tasks are cancelled and awaited. Runtime tests assert the acknowledgement and a changed daemon epoch after restart.
 
 Extension isolation reserves 16 of the 64 connection tasks for paired host clients. OS peer identity is checked before admission; at most 48 non-host connections may wait for input. The request handler checks peer identity again before authorization, so admission classification is not execution authority. Rejected or unidentified connections close without acquiring a task slot. Native integration holds 50 non-host sockets while a host query completes.
+
+The standalone CLI and the packaged host share the index launcher. Callers supply the trusted child executable and arguments. Both modes use the canonical workspace socket, graph database and file lock.

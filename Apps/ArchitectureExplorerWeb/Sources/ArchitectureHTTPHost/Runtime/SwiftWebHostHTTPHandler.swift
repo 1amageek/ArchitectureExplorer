@@ -1,18 +1,10 @@
-import BasicContainers
-import HTTPAPIs
 import HTTPTypes
 import Logging
-import NIOCore
-import NIOHTTPServer
 @_spi(Hosting) import SwiftWebCore
 
-/// Serves the app's collected routes on `NIOHTTPServer`:
+/// Serves the app's collected routes on the native HTTP/WebSocket host:
 /// match → session → middleware chain → handler → write (buffered or streamed).
-struct SwiftWebHostHTTPHandler: HTTPServerRequestHandler {
-    typealias RequestContext = NIOHTTPServer.RequestContext
-    typealias Reader = NIOHTTPServer.Reader
-    typealias ResponseSender = NIOHTTPServer.ResponseSender
-
+struct SwiftWebHostHTTPHandler: Sendable {
     /// Applied when a route uses `.collect(maxSize: nil)`.
     static let defaultMaxBodySize = 4 * 1024 * 1024
 
@@ -32,37 +24,6 @@ struct SwiftWebHostHTTPHandler: HTTPServerRequestHandler {
         self.chain = renderedApp.middlewares
         self.sessionStorage = sessionStorage
         self.logger = logger
-    }
-
-    func handle(
-        request: HTTPRequest,
-        requestContext: consuming NIOHTTPServer.RequestContext,
-        reader: consuming sending NIOHTTPServer.Reader,
-        responseSender: consuming sending NIOHTTPServer.ResponseSender
-    ) async throws {
-        let match = httpMatch(for: request)
-        let bodyLimit = bodyLimit(for: match)
-
-        let bodyBytes: [UInt8]?
-        do {
-            bodyBytes = try await Self.collectRequestBody(reader, limit: bodyLimit)
-        } catch let error as BodyTooLargeError {
-            _ = error
-            let response = HTTPServerErrorResponder.errorResponse(
-                status: .contentTooLarge,
-                reason: "Request body exceeds the route's collection limit"
-            )
-            try await Self.send(response, responseSender: responseSender)
-            return
-        }
-
-        let response = await response(
-            for: request,
-            match: match,
-            bodyBytes: bodyBytes,
-            remoteAddress: nil
-        )
-        try await Self.send(response, responseSender: responseSender)
     }
 
     func httpMatch(for request: HTTPRequest) -> RouteMatch? {
@@ -200,74 +161,6 @@ struct SwiftWebHostHTTPHandler: HTTPServerRequestHandler {
         let header = request.headerFields[values: .cookie].joined(separator: "; ")
         return CookieParser.parse(cookieHeader: header)[HTTPServerSessionBox.cookieName]
     }
-
-    private static func send(
-        _ response: Response,
-        responseSender: consuming sending NIOHTTPServer.ResponseSender
-    ) async throws {
-        let head = HTTPResponse(status: response.status, headerFields: response.headers)
-        if let produce = response.body.stream {
-            var writer = try await responseSender.send(head)
-            // The body writer is not Sendable, so the producer yields chunks
-            // through a stream and this loop performs the writes.
-            let (chunks, continuation) = AsyncThrowingStream<[UInt8], any Error>.makeStream()
-            async let producing: Void = {
-                do {
-                    try await produce(HTTPServerBodyWriter(continuation: continuation))
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }()
-            for try await chunk in chunks {
-                var buffer = UniqueArray<UInt8>(copying: chunk.span)
-                try await writer.write(buffer: &buffer)
-            }
-            await producing
-            var trailing = UniqueArray<UInt8>()
-            try await writer.finish(buffer: &trailing, finalElement: nil)
-        } else {
-            let bytes = response.body.bytes ?? []
-            var buffer = UniqueArray<UInt8>(copying: bytes.span)
-            try await responseSender.sendAndFinish(head, buffer: &buffer, trailer: nil)
-        }
-    }
-
-    struct BodyTooLargeError: Error {}
-
-    private static func collectRequestBody(
-        _ reader: consuming sending NIOHTTPServer.Reader,
-        limit: Int
-    ) async throws -> [UInt8]? {
-        var reader = reader
-        var collected = UniqueArray<UInt8>()
-        var finalElement: HTTPFields?? = nil
-        while finalElement == nil {
-            try await reader.read { buffer, final in
-                collected.append(moving: buffer.startIndex..<buffer.endIndex, from: &buffer)
-                if let final {
-                    finalElement = final
-                }
-            }
-            if collected.count > limit {
-                throw BodyTooLargeError()
-            }
-        }
-        guard !collected.isEmpty else {
-            return nil
-        }
-        var bytes = ByteBuffer()
-        bytes.writeBytes(collected.span.bytes)
-        return bytes.readBytes(length: bytes.readableBytes)
-    }
-}
-
-private struct HTTPServerBodyWriter: BodyWriter {
-    let continuation: AsyncThrowingStream<[UInt8], any Error>.Continuation
-
-    func write(_ bytes: [UInt8]) async throws {
-        continuation.yield(bytes)
-    }
 }
 
 /// The end of the middleware chain: run the matched route or 404.
@@ -288,7 +181,7 @@ private final class HTTPServerRouteResponder: Responder {
         case .webSocket:
             throw Abort(
                 .notImplemented,
-                reason: "WebSocket upgrade is not supported on the swift-http-server host yet"
+                reason: "WebSocket routes require an upgrade request"
             )
         }
     }

@@ -7,8 +7,7 @@ import HTTPTypes
 import Logging
 @_spi(Hosting) import SwiftWebCore
 
-/// Builds the host-neutral request from an `HTTPAPIs` request and its
-/// collected body for the `swift-http-server` host.
+/// Builds the host-neutral request from the HTTP message and its collected body.
 enum HTTPServerRequestFactory {
     static func webRequest(
         request: HTTPRequest,
@@ -49,7 +48,7 @@ enum HTTPServerRequestFactory {
                 fieldDecoder: { type, name in
                     throw Abort(
                         .unsupportedMediaType,
-                        reason: "Multipart field decoding ('\(name)' as \(type)) is not supported on the swift-http-server host yet"
+                        reason: "Multipart field decoding ('\(name)' as \(type)) is not supported on this host"
                     )
                 }
             ),

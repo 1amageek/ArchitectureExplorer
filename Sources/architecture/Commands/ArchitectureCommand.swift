@@ -4,7 +4,6 @@ import ArchitectureGraph
 import ArchitectureIR
 import ArchitectureMCP
 import ArchitectureService
-import ArchitectureStore
 import Darwin
 import Foundation
 
@@ -35,6 +34,12 @@ import Foundation
       exit(typed.exitCode)
     }
   }
+  static func ensureIndex(_ client: ArchitectureClient) async throws {
+    try await ArchitectureDaemonLauncher.ensure(
+      client, executable: URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL,
+      arguments: ["daemon", "run", "--workspace", client.paths.root.path])
+  }
+
   static func output(_ value: JSONValue) throws {
     var data = try CanonicalJSON.encode(value)
     data.append(10)
@@ -66,17 +71,12 @@ import Foundation
       return
     }
     if options.command == "daemon", options.subcommand == "run" {
-      try client.paths.prepareState()
-      let store = try SQLiteGraphStore(
-        path: client.paths.state.appendingPathComponent("graph.sqlite").path,
-        workspaceID: client.paths.workspaceID)
       #if ARCHITECTURE_PAIRED_WEB
       let digests: Set<String> = [HostBuildIdentity.webDigest]
       #else
       let digests: Set<String> = []
       #endif
-      let daemon = try ArchitectureDaemon(paths: client.paths, store: store, trustedHostDigests: digests)
-      try await daemon.run()
+      try await ArchitectureDaemonLauncher.serve(client.paths, trustedHostDigests: digests)
       return
     }
     let commands: Set<String> = [
@@ -90,7 +90,7 @@ import Foundation
     if options.command == "daemon" {
       switch options.subcommand {
       case "start":
-        try await DaemonLauncher.ensure(client)
+        try await ensureIndex(client)
         try output(await client.call("daemon.hello"))
       case "status": try output(await client.call("daemon.hello"))
       case "stop": try output(await client.call("daemon.stop"))
@@ -116,7 +116,7 @@ import Foundation
       try await explore(options, client: client)
       return
     }
-    try await DaemonLauncher.ensure(client)
+    try await ensureIndex(client)
     if options.command == "canvas" {
       let operation = options.subcommand ?? "list"
       var parameters: [String: JSONValue] = [:]

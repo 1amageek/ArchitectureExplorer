@@ -10,13 +10,8 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/1amageek/ArchitectureExplorer.git", exact: "0.1.1"),
-    .package(
-      url: "https://github.com/1amageek/swift-web.git",
-      revision: "6edadb6cfa92e3a4b26a1e669329be38f45212f4"),
+    .package(url: "https://github.com/1amageek/swift-web.git", exact: "0.14.0"),
     .package(url: "https://github.com/1amageek/swift-html.git", exact: "0.16.1"),
-    .package(url: "https://github.com/apple/swift-collections.git", exact: "1.7.1"),
-    .package(url: "https://github.com/apple/swift-http-api-proposal.git", exact: "0.3.0"),
-    .package(url: "https://github.com/swift-server/swift-http-server", exact: "0.1.0"),
     .package(url: "https://github.com/apple/swift-nio.git", exact: "2.105.0"),
     .package(url: "https://github.com/apple/swift-nio-extras.git", exact: "1.35.2"),
     .package(url: "https://github.com/1amageek/swift-tls.git", exact: "2.1.0"),
@@ -28,9 +23,6 @@ let package = Package(
     .target(
       name: "ArchitectureHTTPHost",
       dependencies: [
-        .product(name: "BasicContainers", package: "swift-collections"),
-        .product(name: "HTTPAPIs", package: "swift-http-api-proposal"),
-        .product(name: "NIOHTTPServer", package: "swift-http-server"),
         .product(name: "NIOCore", package: "swift-nio"),
         .product(name: "NIOHTTP1", package: "swift-nio"),
         .product(name: "NIOPosix", package: "swift-nio"),
@@ -42,7 +34,8 @@ let package = Package(
         .product(name: "HTTPTypes", package: "swift-http-types"),
         .product(name: "Logging", package: "swift-log"),
         .product(name: "SwiftWebCore", package: "swift-web"),
-      ], exclude: ["DESIGN.md", "Runtime/DESIGN.md", "Runtime/UPSTREAM-LICENSE"],
+      ], exclude: ["DESIGN.md", "Runtime/DESIGN.md"],
+      resources: [.copy("Runtime/UPSTREAM-LICENSE")],
       swiftSettings: [.enableUpcomingFeature("ApproachableConcurrency")]),
     .target(
       name: "ArchitectureWeb", dependencies: [.product(name: "SwiftHTML", package: "swift-html")],

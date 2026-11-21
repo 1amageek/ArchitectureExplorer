@@ -70,3 +70,9 @@ The local build wrapper pairs a CLI with the exact Web executable digest. A fail
 [ArchitectureCanvas](Sources/ArchitectureCanvas/DESIGN.md) owns generic file imports and shared presentation sessions. Authenticated Canvas operations mutate presentation only; source analysis and verifier authority remain unchanged. The same session is used by Web and MCP.
 
 [C4 System Context](Documentation/C4-CONTEXT-SPEC.md) is the Explorer-owned L1 display contract.
+
+## Embedded host distribution
+
+The `architecture-host` build product packages the existing Web server, assets and index daemon for an application that installs Explorer as part of its own distribution. Both Explorer processes use the same executable so the index can authenticate the Web host by binary identity. The embedding application remains a distinct IPC peer. The standalone headless and Web packages continue to expose their existing commands.
+
+The browser host owns its loopback listener and exits when its caller stops it. The index uses the canonical workspace socket and ownership lock and survives closing the Web host. When any existing index rejects the built-in host, startup reports a pairing error and preserves the existing owner.

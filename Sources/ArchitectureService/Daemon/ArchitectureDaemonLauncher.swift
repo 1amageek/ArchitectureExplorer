@@ -1,9 +1,22 @@
 import ArchitectureClient
 import ArchitectureCore
+import ArchitectureStore
 import Foundation
 
-struct DaemonLauncher {
-  static func ensure(_ client: ArchitectureClient) async throws {
+package enum ArchitectureDaemonLauncher {
+  package static func serve(
+    _ paths: WorkspacePaths, trustedHostDigests: Set<String> = []
+  ) async throws {
+    try paths.prepareState()
+    let store = try SQLiteGraphStore(
+      path: paths.state.appendingPathComponent("graph.sqlite").path, workspaceID: paths.workspaceID)
+    let daemon = try ArchitectureDaemon(paths: paths, store: store, trustedHostDigests: trustedHostDigests)
+    try await daemon.run()
+  }
+
+  package static func ensure(
+    _ client: ArchitectureClient, executable: URL, arguments: [String]
+  ) async throws {
     do {
       let hello = try await client.call("daemon.hello")
       guard hello["workspaceID"].string == client.paths.workspaceID,
@@ -16,8 +29,8 @@ struct DaemonLauncher {
     } catch let error as ArchitectureError where error.code == "CONNECTION_FAILED" {}
     try client.paths.prepareState()
     let process = Process()
-    process.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
-    process.arguments = ["daemon", "run", "--workspace", client.paths.root.path]
+    process.executableURL = executable
+    process.arguments = arguments
     let log = client.paths.state.appendingPathComponent("daemon.log")
     if !FileManager.default.fileExists(atPath: log.path) {
       FileManager.default.createFile(
