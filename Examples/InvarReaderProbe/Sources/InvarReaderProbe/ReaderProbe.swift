@@ -19,7 +19,8 @@ import VerificationExplorer
       }
       let provider = session!
       do {
-        let captured = try await ExplorerSnapshotReader(client: provider.client).capture()
+        let inputs = try AuthenticatedExplorerInputs(provider: provider)
+        let captured = try await ExplorerSnapshotReader(client: inputs).capture()
         let value: JSONValue = .object(["state": .string("captured"), "snapshotID": .string(captured.inventory.snapshotID), "files": .number(Double(captured.files.count)), "entities": .number(Double(captured.inventory.entities.count)), "facts": .number(Double(captured.inventory.facts.count))])
         FileHandle.standardOutput.write(try CanonicalJSON.encode(value) + Data([10]))
         try await provider.disconnect()
