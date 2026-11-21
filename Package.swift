@@ -4,7 +4,7 @@ import PackageDescription
 let names = [
   "ArchitectureCore", "ArchitectureIR", "ArchitectureFrontend", "ArchitectureGraph",
   "ArchitectureStore", "ArchitectureIndexer", "ArchitectureService", "ArchitectureClient",
-  "ArchitectureMCP", "ArchitectureExtensions", "ArchitectureCanvas",
+  "ArchitectureMCP", "ArchitectureExtensions", "ArchitectureCanvas", "ArchitectureServer",
 ]
 let package = Package(
   name: "ArchitectureExplorer",
@@ -124,7 +124,7 @@ let package = Package(
       dependencies: [
         "ArchitectureCore", "ArchitectureIR", "ArchitectureFrontend", "ArchitectureGraph",
         "ArchitectureStore", "ArchitectureIndexer", "ArchitectureService", "ArchitectureClient",
-        "ArchitectureMCP", "ArchitectureExtensions", "ArchitectureCanvas",
+        "ArchitectureMCP", "ArchitectureExtensions", "ArchitectureCanvas", "ArchitectureServer",
       ], resources: [.copy("Fixtures")]),
   ],
   swiftLanguageModes: [.v6]

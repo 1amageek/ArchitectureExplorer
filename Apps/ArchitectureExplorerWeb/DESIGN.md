@@ -1,7 +1,7 @@
 # ArchitectureExplorerWeb
 
 ## Purpose and Scope
-Independent native macOS 27+ Web package. Parent: [system/headless package](../../DESIGN.md). Children: [Web pages](Sources/ArchitectureWeb/DESIGN.md), [Server composition](Sources/ArchitectureServer/DESIGN.md), [Native host](Sources/ArchitectureHTTPHost/DESIGN.md), [entry point](Sources/architecture-web/DESIGN.md).
+Native macOS 27+ standalone entry point for the root package’s shared ArchitectureServer product. Parent: [system/headless package](../../DESIGN.md). Children: [Web pages](Sources/ArchitectureWeb/DESIGN.md), [Server composition](Sources/ArchitectureServer/DESIGN.md), [Native host](Sources/ArchitectureHTTPHost/DESIGN.md), [entry point](Sources/architecture-web/DESIGN.md).
 
 ## Responsibilities and Boundaries
 SwiftHTML creates the page shell, bundled Cytoscape renders bounded views, ELK runs in workers, and SwiftWebCore/native host serve authenticated HTTP/WS. Only ArchitectureClient accesses graph data. Repository-map mode reads one working-tree scope through the Core filesystem reader and requests a selected-file outline from Frontend. It starts no index or daemon and writes no database. No runtime Node/npm/WASM/CDN build.
