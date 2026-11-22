@@ -5,7 +5,7 @@ let package = Package(
   name: "ArchitectureExplorerWeb", platforms: [.macOS("27.0")],
   products: [.executable(name: "architecture-web", targets: ["architecture-web"])],
   dependencies: [
-    .package(url: "https://github.com/1amageek/ArchitectureExplorer.git", exact: "0.1.3"),
+    .package(url: "https://github.com/1amageek/ArchitectureExplorer.git", exact: "0.1.4"),
   ],
   targets: [
     .executableTarget(
