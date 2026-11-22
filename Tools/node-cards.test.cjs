@@ -29,6 +29,7 @@ class Element {
   setAttribute(key,value){this[key]=value;}
   getContext(){return {font:'',measureText:value=>({width:Array.from(value).length*7})};}
 }
+const listRows=host=>host?.children.filter(child=>child.tagName==='ul').flatMap(list=>list.children.map(item=>item.children[0]))||[];
 const entity=(id,kind,attributes={},extra={})=>({id,kind,name:id,language:'swift',attributes,...extra});
 async function render(nodes,edges=[],saved=false,settings={}){
   const elements=new Map(),theme={value:'light'},media={},workers=[],sockets=[],networkRequests=[],observers=[],frames=new Map();let cy,frameID=0;
@@ -36,7 +37,7 @@ async function render(nodes,edges=[],saved=false,settings={}){
   const palette={light:{},dark:{}};
   roots.forEach((root,i)=>{for(const match of root[1].matchAll(/--graph-([\w-]+):\s*([^;]+);/g))palette[i?'dark':'light'][match[1]]=match[2].trim();});
   const documentListeners=new Map();
-  const document={querySelector:selector=>settings.repository&&selector==='meta[name="repository-map"]'?{}:null,documentElement:{},getElementById:id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);},createElement:tag=>new Element(tag),addEventListener:(type,callback)=>{if(!documentListeners.has(type))documentListeners.set(type,[]);documentListeners.get(type).push(callback);},querySelectorAll:()=>[...(elements.get('navigator')?.children||[]),...(elements.get('node-list')?.children||[])]};
+  const document={querySelector:selector=>settings.repository&&selector==='meta[name="repository-map"]'?{}:null,documentElement:{},getElementById:id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);},createElement:tag=>new Element(tag),addEventListener:(type,callback)=>{if(!documentListeners.has(type))documentListeners.set(type,[]);documentListeners.get(type).push(callback);},querySelectorAll:()=>[...listRows(elements.get('navigator')),...listRows(elements.get('node-list')).filter(row=>row.dataset.entityId)]};
   const view={extensions:settings.extensions,...(settings.diagram?{canvas:settings.diagram}:{}),workspaceID:'workspace',snapshotID:'snapshot',queryID:'query',freshness:'current',completeness:'partial',nodes,edges,evidence:[],coverage:[]};
   const windowListeners=new Map(),entries=[{state:settings.state||null,url:settings.hash||'/'}];let entryIndex=0;
   const history={get state(){return structuredClone(entries[entryIndex].state);},entries,get index(){return entryIndex;},pushState(state,unused,url){entries.splice(++entryIndex);entries.push({state:structuredClone(state),url:url||entries[entryIndex-1].url});if(settings.repository)sandbox.location.hash=url;},replaceState(state,unused,url){entries[entryIndex]={state:structuredClone(state),url:url||entries[entryIndex].url};},back(){if(entryIndex>0){entryIndex--;queueMicrotask(()=>{for(const listener of windowListeners.get('popstate')||[])listener({state:history.state});});}},forward(){if(entryIndex+1<entries.length){entryIndex++;queueMicrotask(()=>{for(const listener of windowListeners.get('popstate')||[])listener({state:history.state});});}}};
@@ -138,7 +139,7 @@ test('recorded roles stay distinct; unknown refinements use the coarse category'
   const accent=id=>page.svg(id).match(/<g data-role="[^"]+"[^>]*><rect[^>]* fill="([^"]+)"/)[1];
   assert.equal(new Set(['class','struct','function','module'].map(accent)).size,4,'Primary paradigms have distinguishable accents');
   const palette=Object.fromEntries([...fs.readFileSync(path.join(assets,'explorer.css'),'utf8').split('@media')[0].matchAll(/(--graph-role-[\w-]+):\s*(#[\da-f]{6})/g)].map(m=>[m[1],m[2]]));
-  for(const role of roles){const mark=page.elements.get('navigator').children.find(n=>n.dataset.entityId===role).children[0];const token=mark.style.getPropertyValue('--role-accent').match(/var\(([^)]+)\)/)[1];assert.equal(palette[token],accent(role),'Navigator and Canvas use the same recorded role accent');}
+  for(const role of roles){const mark=listRows(page.elements.get('navigator')).find(n=>n.dataset.entityId===role).children[0];const token=mark.style.getPropertyValue('--role-accent').match(/var\(([^)]+)\)/)[1];assert.equal(palette[token],accent(role),'Navigator and Canvas use the same recorded role accent');}
   assert.match(page.svg('ClassInName'),/<g data-role="type"/);assert.equal(accent('ClassInName'),palette['--graph-role-type']);
 });
 test('source Canvas filter keeps ancestor frames and both controls operate on the loaded graph',async t=>{
@@ -174,7 +175,7 @@ test('card and accessible List preserve signature, source, owner and synthetic o
   assert.equal(save.split('_ tasks: List').length,2);
   page.cy.getElementById('save').emit('mouseover');
   assert.ok(page.elements.get('graph').title.includes(signature));
-  const row=page.elements.get('node-list').children[0];assert.match(row.children[1].children[1].textContent,/func Owner\(_ x: Int\) -> Int.*Sources\/Flow.swift/);
+  const row=listRows(page.elements.get('node-list'))[0];assert.match(row.children[1].children[1].textContent,/func Owner\(_ x: Int\) -> Int.*Sources\/Flow.swift/);
 });
 test('source strings become escaped bounded SVG text, never executable markup',async t=>{
   const hostile='</text><script>alert("x")</script>&';
@@ -182,7 +183,7 @@ test('source strings become escaped bounded SVG text, never executable markup',a
   const page=await render([entity('hostile','type',{'syntax.signature':hostile},{name:hostile,anchor:{path:hostile}}),entity('long','type',{}, {name:longName})]);t.after(()=>page.cy.destroy());
   const svg=page.svg('hostile');assert.doesNotMatch(svg,/<script|alert\("x"\)/);assert.match(svg,/&lt;\/text&gt;/);assert.match(svg,/&amp;/);
   assert.ok([...page.svg('long').matchAll(/<text[^>]*>(.*?)<\/text>/g)].map(m=>m[1]).join('').length<250);assert.match(page.svg('long'),/…/);
-  assert.equal(page.elements.get('navigator').children[1].children[1].textContent,longName);
+  assert.equal(listRows(page.elements.get('navigator'))[1].children[1].textContent,longName);
 });
 test('ELK and canvas use identical dimensions and true center coordinates',async t=>{
   const page=await render([entity('one','module'),entity('two','function')]);t.after(()=>page.cy.destroy());
@@ -202,7 +203,7 @@ test('system appearance refreshes card images without changing selection or view
 test('standalone saved views use the same cards without a worker or network',async t=>{
   const page=await render([entity('Saved','type',{'declaration.kind':'class','syntax.signature':'class Saved'}, {anchor:{path:'Saved.swift'}})],[],true);t.after(()=>page.cy.destroy());
   assert.equal(page.worker,undefined);assert.equal(page.networkRequests.length,0);assert.match(page.elements.get('live').textContent,/Saved.*not live/);assert.match(page.svg('Saved'),/>Class</);assert.match(page.svg('Saved'),/Saved.swift/);assert.equal(page.cy.getElementById('Saved').height(),112);
-  page.cy.getElementById('Saved').emit('tap');assert.equal(page.cy.$(':selected').id(),'Saved');assert.equal(page.elements.get('navigator').children[0]['aria-pressed'],'true');assert.ok(page.elements.get('inspector').children.some(e=>e.tagName==='h2'&&e.textContent==='Saved'));
+  page.cy.getElementById('Saved').emit('tap');assert.equal(page.cy.$(':selected').id(),'Saved');assert.equal(listRows(page.elements.get('navigator'))[0]['aria-pressed'],'true');assert.ok(page.elements.get('inspector').children.some(e=>e.tagName==='h2'&&e.textContent==='Saved'));
 });
 
 test('language slots use bundled logos, keep accessible names, and preserve unknown languages',async t=>{
@@ -213,10 +214,10 @@ test('language slots use bundled logos, keep accessible names, and preserve unkn
     assert.match(page.svg(id),new RegExp('data-language="'+language+'"[^>]+fill="'+(language==='swift'?'#f05138':'#a84a2a')+'"'));
     assert.doesNotMatch(page.svg(id),new RegExp('>'+label+'</text>'));
     assert.doesNotMatch(page.svg(id),/<image|(?:href|src)=/);
-    const row=page.elements.get('node-list').children.find(e=>e.dataset.entityId===id);
+    const row=listRows(page.elements.get('node-list')).find(e=>e.dataset.entityId===id);
     assert.match(row.children[2].textContent,new RegExp(label));
   }
-  assert.match(page.svg('unknown-node'),/data-language="kotlin"/);assert.match(page.elements.get('node-list').children[2].children[2].textContent,/kotlin/i);assert.doesNotMatch(page.svg('no-language'),/data-language=/);
+  assert.match(page.svg('unknown-node'),/data-language="kotlin"/);assert.match(listRows(page.elements.get('node-list'))[2].children[2].textContent,/kotlin/i);assert.doesNotMatch(page.svg('no-language'),/data-language=/);
   page.cy.getElementById('swift-node').emit('mouseover');assert.match(page.elements.get('graph').title,/Swift/);
   page.cy.getElementById('swift-node').emit('mouseout');assert.equal(page.elements.get('graph').title,'');
   const before=page.svg('rust-node');page.theme.value='dark';page.media.change();assert.notEqual(page.svg('rust-node'),before);assert.match(page.svg('rust-node'),/data-language="rust"[^>]+fill="#df8656"/);
@@ -236,7 +237,7 @@ test('edges convey recorded relation families and CFG branches without permanent
   assert.match(legend,/Contains/);assert.match(legend,/Possible calls/);assert.match(legend,/True branch/);assert.match(legend,/False branch/);assert.match(legend,/Other/);
   page.cy.getElementById('false-edge').emit('mouseover');assert.match(page.elements.get('graph').title,/source.*controlFlow.*false.*target/);
   page.cy.getElementById('false-edge').emit('mouseout');assert.equal(page.elements.get('graph').title,'');
-  const rows=page.elements.get('node-list').children.filter(e=>e.className==='relation-row');assert.equal(rows.length,edges.length);assert.ok(rows.some(e=>e.children.some(c=>String(c.textContent).includes('futureRelation'))));
+  const rows=listRows(page.elements.get('node-list')).filter(e=>e.className==='relation-row');assert.equal(rows.length,edges.length);assert.ok(rows.some(e=>e.children.some(c=>String(c.textContent).includes('futureRelation'))));
   const before=line('true-edge');page.run("window.graph.zoom(1.25);window.graph.pan({x:123,y:87});");page.cy.getElementById('false-edge').select();page.theme.value='dark';page.media.change();assert.notEqual(line('true-edge'),before);assert.deepEqual({...page.cy.pan()},{x:123,y:87});assert.equal(page.cy.zoom(),1.25);assert.equal(page.cy.$(':selected').id(),'false-edge');
 });
 
@@ -318,7 +319,7 @@ test('compound rendering keeps every fact in List and retains routes and manual 
   assert.equal(page.cy.nodes().length,3);assert.equal(page.cy.edges().length,1);assert.ok(page.cy.getElementById('package').isParent());assert.equal(page.cy.getElementById('consumer').parent().id(),'package');
   const p=page.cy.getElementById('package').boundingBox(),c=page.cy.getElementById('consumer').boundingBox();assert.ok(c.x1>p.x1&&c.y1>p.y1+64);
   assert.equal(page.cy.zoom(),.75);assert.deepEqual({...page.cy.pan()},{x:24-p.x1*.75,y:24-p.y1*.75});
-  assert.match(page.svg('package'),/height="64"/);assert.equal(page.elements.get('node-list').children.filter(e=>e.className==='relation-row').length,3);assert.match(page.elements.get('edge-legend').children[0].children[1].textContent,/frames/);
+  assert.match(page.svg('package'),/height="64"/);assert.equal(listRows(page.elements.get('node-list')).filter(e=>e.className==='relation-row').length,3);assert.match(page.elements.get('edge-legend').children[0].children[1].textContent,/frames/);
   assert.ok(page.cy.getElementById('uses').hasClass('direct')||page.cy.getElementById('uses').hasClass('routed'));
   page.run("window.graph.getElementById('consumer').position({x:333,y:444}).select().emit('drag');");assert.equal(page.cy.getElementById('uses').hasClass('routed'),false);assert.equal(page.cy.getElementById('uses').hasClass('direct'),false);
   assert.deepEqual({...page.cy.getElementById('consumer').position()},{x:333,y:444},'Drag changes the card position');
@@ -549,7 +550,7 @@ test('edge focus follows hover and selection, restores context, and preserves ev
   page.cy.nodes().unselect();for(const edge of page.cy.edges())assert.equal(opacity(edge.id()),base);
   page.cy.getElementById('cd').emit('mouseover');assert.ok(opacity('cd')>base);page.cy.getElementById('cd').emit('mouseout');assert.equal(opacity('cd'),base);
   page.cy.getElementById('b').emit('tap');page.key('Escape');assert.equal(page.cy.$(':selected').length,0);for(const edge of page.cy.edges())assert.equal(opacity(edge.id()),base);assert.ok(page.elements.get('inspector').children.some(n=>n.textContent==='No Selection'));
-  assert.equal(JSON.stringify(page.cy.nodes().map(n=>[n.id(),{...n.position()}])),before);assert.ok(page.cy.nodes().every(n=>Number(n.style('opacity'))===1));assert.equal(page.cy.edges().length,3);assert.equal(page.elements.get('node-list').children.filter(e=>e.className==='relation-row').length,3);assert.equal(page.networkRequests.length,0);assert.equal(page.cy.zoom(),1.1);assert.deepEqual({...page.cy.pan()},{x:123,y:87});
+  assert.equal(JSON.stringify(page.cy.nodes().map(n=>[n.id(),{...n.position()}])),before);assert.ok(page.cy.nodes().every(n=>Number(n.style('opacity'))===1));assert.equal(page.cy.edges().length,3);assert.equal(listRows(page.elements.get('node-list')).filter(e=>e.className==='relation-row').length,3);assert.equal(page.networkRequests.length,0);assert.equal(page.cy.zoom(),1.1);assert.deepEqual({...page.cy.pan()},{x:123,y:87});
 });
 
 test('frame hover keeps the overview quiet; explicit frame selection includes descendant connections',async t=>{
@@ -559,7 +560,7 @@ test('frame hover keeps the overview quiet; explicit frame selection includes de
   page.cy.getElementById('p').emit('mouseover');assert.equal(opacity('ab'),base);assert.equal(opacity('bc'),base);page.cy.getElementById('p').emit('mouseout');
   page.cy.getElementById('p').emit('tap');assert.ok(opacity('ab')>base);assert.ok(opacity('bc')>base);
   page.cy.getElementById('a').emit('mouseover');assert.ok(opacity('ab')>base);assert.ok(opacity('bc')<base);page.cy.getElementById('a').emit('mouseout');assert.ok(opacity('bc')>base);
-  page.cy.emit('tap');assert.equal(page.cy.$(':selected').length,0);assert.equal(opacity('ab'),base);assert.equal(opacity('bc'),base);assert.equal(page.cy.edges().length,2);assert.equal(page.elements.get('node-list').children.filter(e=>e.className==='relation-row').length,4);
+  page.cy.emit('tap');assert.equal(page.cy.$(':selected').length,0);assert.equal(opacity('ab'),base);assert.equal(opacity('bc'),base);assert.equal(page.cy.edges().length,2);assert.equal(listRows(page.elements.get('node-list')).filter(e=>e.className==='relation-row').length,4);
 });
 
 test('rendered frames match allocated geometry and never overlap unrelated nodes or sibling scopes',async t=>{
@@ -609,8 +610,8 @@ test('files and nested declarations are real frames with readable basenames',asy
   const edges=[['file','actor'],['actor','method'],['file','top']].map(([source,target])=>({id:source+'-'+target,source,target,kind:'contains'}));
   const page=await render(nodes,edges,true);t.after(()=>page.cy.destroy());
   assert.equal(page.cy.getElementById('actor').parent().id(),'file');assert.equal(page.cy.getElementById('method').parent().id(),'actor');assert.equal(page.cy.getElementById('top').parent().id(),'file');
-  assert.match(page.svg('file'),/>SessionAuthority.swift</);assert.equal(page.elements.get('navigator').children[0].children[1].textContent,'SessionAuthority.swift');assert.match(page.elements.get('navigator').children[0].title,/Sources\/Session\/SessionAuthority.swift/);
-  assert.equal(page.cy.edges().length,0);assert.equal(page.elements.get('node-list').children.filter(n=>n.className==='relation-row').length,3);
+  assert.match(page.svg('file'),/>SessionAuthority.swift</);assert.equal(listRows(page.elements.get('navigator'))[0].children[1].textContent,'SessionAuthority.swift');assert.match(listRows(page.elements.get('navigator'))[0].title,/Sources\/Session\/SessionAuthority.swift/);
+  assert.equal(page.cy.edges().length,0);assert.equal(listRows(page.elements.get('node-list')).filter(n=>n.className==='relation-row').length,3);
   for(const frame of page.cy.nodes(':parent')){
     const box=frame.boundingBox({includeLabels:false,includeOverlays:false});
     for(const child of frame.children()){const rect=child.boundingBox({includeLabels:false,includeOverlays:false});assert.ok(rect.x1>=box.x1&&rect.x2<=box.x2&&rect.y1-box.y1>=64&&rect.y2<=box.y2);}
@@ -619,8 +620,8 @@ test('files and nested declarations are real frames with readable basenames',asy
 
 test('Expand requests complete file outlines and reload upgrades legacy direct-child routes',async t=>{
   const page=await render([entity('module','module'),entity('file','file')]);t.after(()=>page.cy.destroy());
-  page.elements.get('navigator').children[0].fire('dblclick');await settle();assert.deepEqual(requestedQuery(page),{method:'graph.children',focus:'module',level:'file',depth:3});
-  page.elements.get('navigator').children[1].fire('dblclick');await settle();assert.deepEqual(requestedQuery(page),{method:'graph.children',focus:'file',level:'file',depth:2});
+  listRows(page.elements.get('navigator'))[0].fire('dblclick');await settle();assert.deepEqual(requestedQuery(page),{method:'graph.children',focus:'module',level:'file',depth:3});
+  listRows(page.elements.get('navigator'))[1].fire('dblclick');await settle();assert.deepEqual(requestedQuery(page),{method:'graph.children',focus:'file',level:'file',depth:2});
   const restored=await render([entity('module','module')],[],false,{state:{architectureExplorer:1,index:2,level:'module',query:{method:'graph.children',focus:'module',depth:1},camera:{zoom:.2,pan:{x:1,y:2}}}});t.after(()=>restored.cy.destroy());
   assert.deepEqual(requestedQuery(restored),{method:'graph.children',focus:'module',level:'file',depth:3});assert.equal(restored.history.entries.length,1);assert.equal(restored.history.state.camera,undefined);
 });
@@ -703,7 +704,7 @@ test('property rows expose access, binding, name and type without card chrome an
   const columns=[...page.svg('count').matchAll(/<text x="(\d+)" y="(\d+)"/g)].map(match=>[Number(match[1]),Number(match[2])]);
   assert.deepEqual(columns,[[12,21],[184,21],[254,21],[416,21]],'Access, binding, name and type retain the original single-line columns');
   const name=page.cy.getElementById('name'),count=page.cy.getElementById('count');assert.equal(count.position().y-name.position().y,32);
-  count.emit('tap');assert.equal(page.cy.$(':selected').id(),'count');assert.ok(page.elements.get('inspector').children.some(e=>e.textContent==='count'));assert.equal(count.height(),32);assert.equal(page.cy.edges().length,1);assert.equal(page.cy.getElementById('uses-count').source().id(),'count');assert.equal(Number(page.cy.getElementById('uses-count').style('opacity')),1);assert.equal(page.elements.get('node-list').children.filter(e=>e.className==='relation-row').length,6);
+  count.emit('tap');assert.equal(page.cy.$(':selected').id(),'count');assert.ok(page.elements.get('inspector').children.some(e=>e.textContent==='count'));assert.equal(count.height(),32);assert.equal(page.cy.edges().length,1);assert.equal(page.cy.getElementById('uses-count').source().id(),'count');assert.equal(Number(page.cy.getElementById('uses-count').style('opacity')),1);assert.equal(listRows(page.elements.get('node-list')).filter(e=>e.className==='relation-row').length,6);
   const before=page.svg('count');page.theme.value='dark';page.media.change();assert.notEqual(page.svg('count'),before);assert.equal(page.cy.$(':selected').id(),'count');assert.equal(count.height(),32);
 });
 
@@ -722,7 +723,7 @@ const breadcrumbLinks=page=>page.elements.get('breadcrumb').children.filter(n=>n
 test('breadcrumbs use pinned recorded ancestors outside the visible graph and navigate through browser history',async t=>{
   const fixture=hierarchyFixture(),ancestry=[];
   const page=await render([fixture.nodes.at(-1)],[],false,{fetch:(url,view)=>{const u=new URL('http://localhost'+url),q=JSON.parse(u.searchParams.get('params'));if(u.searchParams.get('method')==='graph.neighbors'&&q.direction==='incoming'){ancestry.push(q);return {ok:true,json:async()=>({...view,...fixture})};}return {ok:true,json:async()=>view};}});t.after(()=>page.cy.destroy());
-  page.elements.get('navigator').children[0].fire('dblclick');await settle();
+  listRows(page.elements.get('navigator'))[0].fire('dblclick');await settle();
   assert.deepEqual(breadcrumbLinks(page).map(n=>n.textContent),['package','module','Model.swift']);assert.equal(page.elements.get('view-title').textContent,'Model');assert.equal(page.cy.nodes().length,1,'Ancestor metadata does not expand Canvas elements');assert.equal(page.elements.get('counts').textContent,'1 entities · 0 relations');
   assert.deepEqual(ancestry[0],{focus:'type',snapshotID:'snapshot',kinds:['contains'],direction:'incoming',depth:8,limit:500,edgeLimit:1500});
   const picker=page.elements.get('breadcrumb').children.find(n=>n.tagName==='select');assert.deepEqual(picker.children.slice(1).map(n=>n.value),['package','module','file']);
@@ -752,7 +753,7 @@ test('stale ancestry success and failure cannot overwrite a newer route; saved v
   for(const failure of [false,true]){
     const fixture=hierarchyFixture(),pending=[];
     const page=await render([fixture.nodes.at(-1)],[],false,{fetch:(url,view)=>new URL('http://localhost'+url).searchParams.get('method')==='graph.neighbors'?new Promise((resolve,reject)=>pending.push({resolve,reject})):({ok:true,json:async()=>view})});t.after(()=>page.cy.destroy());
-    page.elements.get('navigator').children[0].fire('dblclick');await settle();assert.equal(pending.length,1);assert.equal(breadcrumbLinks(page).length,0);
+    listRows(page.elements.get('navigator'))[0].fire('dblclick');await settle();assert.equal(pending.length,1);assert.equal(breadcrumbLinks(page).length,0);
     page.elements.get('level').value='function';page.elements.get('level').onchange();await settle();if(failure)pending[0].reject(Error('Obsolete ancestry'));else pending[0].resolve({ok:true,json:async()=>({...page.view,...fixture})});await settle();assert.equal(page.elements.get('view-title').textContent,'Functions & Methods');assert.equal(breadcrumbLinks(page).length,0);assert.equal(page.elements.get('breadcrumb').children.some(n=>n.className==='crumb-notice'),false);
   }
   const saved=await render([entity('saved','module')],[],true);t.after(()=>saved.cy.destroy());assert.equal(saved.elements.get('breadcrumb').children[0].disabled,true);assert.equal(saved.elements.get('view-title').textContent,'Saved snapshot');assert.equal(saved.networkRequests.length,0);
@@ -852,6 +853,42 @@ test('real Swift/Rust source graphs render structured free functions, receivers 
     node.emit('tap');assert.equal(page.cy.$(':selected').id(),declaration.id);assert.ok(page.elements.get('inspector').children.some(n=>n.textContent===name));
     const before=page.svg(declaration.id);page.theme.value='dark';page.media.change();assert.notEqual(page.svg(declaration.id),before);assert.equal(page.cy.$(':selected').id(),declaration.id);
   }
+});
+
+test('the sequence catalogue lists full scenario metadata and opens the selected pinned sequence',async t=>{
+  const participants=['macOS Task Workspace','Workspace Ledger'];
+  const catalogue=[
+    {key:'save',title:'Task save',requirements:['TODO01','TODO04'],participants},
+    {key:'retry',title:'Retry same mutation',requirements:['TODO04'],participants}
+  ];
+  const reads=[];
+  const page=await render([entity('workspace','workspace')],[],false,{canvasUI:true,fetch:(raw,view)=>{
+    const url=new URL(raw,'http://localhost'),method=url.searchParams.get('method');
+    if(method==='workspace.sequences')return {ok:true,json:async()=>({status:'available',snapshotID:'snapshot',sequences:catalogue})};
+    if(method==='workspace.sequence'){
+      reads.push(JSON.parse(url.searchParams.get('params')));
+      return {ok:false,json:async()=>({error:'Scenario no longer available'})};
+    }
+    return {ok:true,json:async()=>view};
+  }});
+  t.after(()=>page.cy.destroy());
+  page.elements.get('open-sequences').onclick();await settle();
+  const reader=page.elements.get('specification-reader'),list=reader.children[1];
+  assert.equal(reader.hidden,false);
+  assert.equal(list.tagName,'ul');
+  assert.equal(list['aria-label'],'Sequences');
+  assert.deepEqual(list.children.map(item=>item.tagName),['li','li']);
+  const rows=listRows(reader);
+  assert.deepEqual(rows.map(row=>row.children.map(child=>child.textContent)),[
+    ['Task save','TODO01, TODO04',participants.join(' · ')],
+    ['Retry same mutation','TODO04',participants.join(' · ')],
+  ]);
+  rows[1].fire('click');await settle();
+  assert.deepEqual(reads,[{snapshotID:'snapshot',key:'retry'}]);
+  assert.equal(page.elements.get('counts').textContent,'Unavailable');
+  page.history.back();await settle();
+  assert.equal(reader.hidden,false);
+  assert.equal(listRows(reader).length,2);
 });
 
 test('sequence headers center complete names and preserve directional messages at rest and on selection',async t=>{
@@ -979,7 +1016,8 @@ test('Map object inspection follows the source and destination of a declared int
   const edge={id:'request',kind:'dependsOn',source:'launcher',target:'endpoint',attributes:{'context.operation':'Creates a session','context.technology':'HTTPS'},evidenceIDs:[]};
   const page=await render(nodes,[edge]);t.after(()=>page.cy.destroy());
   page.cy.getElementById('launcher').emit('tap');
-  const inspector=page.elements.get('inspector'), row=()=>inspector.children.find(e=>e.className==='map-connection');
+  const inspector=page.elements.get('inspector');
+  const row=()=>inspector.children.find(e=>e.tagName==='ul'&&e['aria-label']==='Connections').children[0];
   assert.ok(inspector.children.find(e=>e.tagName==='dl').children.some(e=>e.textContent==='Payments'));
   assert.deepEqual(row().children.map(e=>e.textContent),['To','endpoint','Creates a session · HTTPS']);
   row().children[1].fire('click');
@@ -1054,7 +1092,7 @@ test('repository selection opens architecture and a service selects its composit
   assert.doesNotMatch(page.svg('core'),/data-language=/);
   page.cy.getElementById('core').emit('tap');
   await new Promise(setImmediate);
-  page.elements.get('node-list').children[0].fire('click');
+  listRows(page.elements.get('node-list'))[0].fire('click');
   await new Promise(setImmediate);
   assert.equal(page.cy.nodes().id(),'entry');
   assert.match(page.svg('entry'),/data-language="typescript"/);
@@ -1117,7 +1155,7 @@ test('type-reference edges and relation list open the pinned source expression',
   page.cy.getElementById('use').emit('tap');await settle();
   assert.equal(page.cy.getElementById('use').data('relation'),'candidate-types');
   assert.ok(page.elements.get('inspector').children.some(child=>child.textContent==='Month.swift:7'));
-  const row=page.elements.get('node-list').children.find(child=>child.className==='relation-row');
+  const row=listRows(page.elements.get('node-list')).find(child=>child.className==='relation-row');
   assert.equal(row.tagName,'button');row.fire('click');await settle();
   assert.deepEqual(reads,[0,1].map(()=>({entityID:'month',snapshotID:'snapshot',startByte:123,endByte:134})));
 });
@@ -1147,7 +1185,7 @@ test('file canvas opens on linked declarations inside their files and can reveal
   toggle.onclick();
   assert.equal(page.cy.getElementById('Unused').parent().id(),'A.swift');
   toggle.onclick();
-  page.elements.get('navigator').children.find(n=>n.dataset.entityId==='Unused').fire('click');
+  listRows(page.elements.get('navigator')).find(n=>n.dataset.entityId==='Unused').fire('click');
   assert.ok(page.cy.getElementById('Unused').selected());
   const outline=await render(nodes,ownership,false,settings);
   t.after(()=>outline.cy.destroy());

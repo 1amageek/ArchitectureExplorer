@@ -10,6 +10,23 @@
   let view, cy, selected, selectedFact, query = {method:'graph.overview',level:'context'}, navigation, layoutReadyQuery, searchTimer, inspection = 0, request = 0, layoutGeneration = 0, lastLayoutKey, visibleLayout, edgeHoverNode, worker, streamEpoch;
   const text = (tag,value,cls) => {const e=document.createElement(tag);e.textContent=value;if(cls)e.className=cls;return e;};
   const button = (label,action,cls) => {const e=text('button',label,cls);e.addEventListener('click',action);return e;};
+  function contentList(label,className=''){
+    const list=text('ul','','content-list'+(className?' '+className:''));
+    list.setAttribute('role','list');
+    list.setAttribute('aria-label',label);
+    return list;
+  }
+  function appendListRow(list,action){
+    const item=text('li','');
+    item.append(action);
+    list.append(item);
+  }
+  function listEntryContent(title,detail){
+    const content=text('span','','entity-content');
+    content.append(text('span',title,'entity-name'));
+    if(detail)content.append(text('span',detail,'entity-context'));
+    return content;
+  }
   function createTerminal(){
     const toggle=$('terminal-toggle'),output=$('terminal-output'),history=[];
     const capacity=250;
@@ -1134,13 +1151,16 @@
     else if(result.status==='invalid'){
       reader.append(text('p','SEQUENCES.dsl could not be read.'));
       for(const diagnostic of result.diagnostics||[])reader.append(text('p',diagnostic.message));
+    }else if(result.status==='available'&&!result.sequences.length){
+      reader.append(text('p','No sequences use this architecture element.'));
     }else if(result.status==='available'){
-      if(!result.sequences.length)reader.append(text('p','No sequences use this architecture element.'));
-      const rows=text('div','','sequence-list');
+      const rows=contentList(heading.textContent,'sequence-list');
       for(const entry of result.sequences){
         const row=button('',()=>canvas.openWorkspaceSequence(entry,result.snapshotID).catch(problem),'sequence-list-row');
-        row.append(text('strong',entry.title),text('span',[entry.requirements.join(', '),entry.participants.join(' · ')].filter(Boolean).join('  —  ')));
-        rows.append(row);
+        row.append(text('strong',entry.title));
+        if(entry.requirements.length)row.append(text('span',entry.requirements.join(', ')));
+        if(entry.participants.length)row.append(text('span',entry.participants.join(' · ')));
+        appendListRow(rows,row);
       }
       reader.append(rows);
     }else throw Error('Sequence catalogue status is unavailable.');
@@ -1296,8 +1316,25 @@
     else{empty.textContent='No recorded entities in this view.';}
     const nav=$('navigator'),list=$('node-list');nav.replaceChildren();list.replaceChildren();
     const nodes=new Map(view.nodes.map(n=>[n.id,n])),parents=model.parents,owners=fullModel.owners;
-    navigationNodes.forEach(node=>{const [kind,icon]=symbolKind(node),language=languageName(node),context=nodeContext(node,owners,nodes);const entry=button('',()=>selectEntry(node));entry.dataset.entityId=node.id;entry.title=[kind,language,node.name,context.detail,context.source].filter(Boolean).join(' · ');entry.append(roleMark(node),text('span',nodeTitle(node),'node-name'),text('span',kind,'node-kind'));entry.addEventListener('dblclick',()=>expand(node));nav.append(entry);
-      const row=button('',()=>selectEntry(node));row.dataset.entityId=node.id;row.className='entity-row';const content=text('span','','entity-content');content.append(text('span',nodeTitle(node),'entity-name'),text('span',[context.detail,context.source||'No source anchor'].filter(Boolean).join(' · '),'entity-context'));row.append(roleMark(node),content,text('span',[kind,language,context.synthetic?'Synthetic':''].filter(Boolean).join(' · '),'entity-type'));row.addEventListener('dblclick',()=>expand(node));list.append(row);});
+    const navRows=contentList(sequence?'Participants':'Workspace entities','navigator-list');
+    const entityRows=contentList(sequence?'Participants':'Entities','graph-list');
+    for(const node of navigationNodes){
+      const [kind]=symbolKind(node),language=languageName(node),context=nodeContext(node,owners,nodes);
+      const entry=button('',()=>selectEntry(node));
+      entry.dataset.entityId=node.id;
+      entry.title=[kind,language,node.name,context.detail,context.source].filter(Boolean).join(' · ');
+      entry.append(roleMark(node),text('span',nodeTitle(node),'node-name'),text('span',kind,'node-kind'));
+      entry.addEventListener('dblclick',()=>expand(node));
+      appendListRow(navRows,entry);
+      const row=button('',()=>selectEntry(node),'entity-row');
+      row.dataset.entityId=node.id;
+      const detail=sequence?'':[context.detail,context.source||'No source anchor'].filter(Boolean).join(' · ');
+      row.append(roleMark(node),listEntryContent(nodeTitle(node),detail),
+        text('span',[kind,language,context.synthetic?'Synthetic':''].filter(Boolean).join(' · '),'entity-type'));
+      row.addEventListener('dblclick',()=>expand(node));
+      appendListRow(entityRows,row);
+    }
+    if(navigationNodes.length){nav.append(navRows);list.append(entityRows);}
     if(!term&&!view.canvas&&query.method==='graph.search'&&query.text){
       const filter={text:query.text};
       external?.modelSlot(nav,filter,count=>{$('scope-count').textContent=String(view.nodes.length+count);});
@@ -1308,17 +1345,16 @@
         external?.modelSlot(empty,filter,count=>{message.hidden=count>0;});
       }
     }
-    if(navigationEdges.length)list.append(text('h2',sequence?'Messages':'Relations','list-heading'));
+    const relationLabel=sequence?'Messages':'Relations';
+    const relationRows=contentList(relationLabel,'graph-list');
     for(const edge of navigationEdges){
       const row=button('',()=>view.canvas?inspectCanvasEdge(edge.id):inspectSourceEdge(edge),'relation-row');
       const endpoints=(nodes.get(edge.source)?.name||edge.source)+' → '+(nodes.get(edge.target)?.name||edge.target);
-      if(sequence){
-        const content=text('span','','entity-content');
-        content.append(text('span',edge.canvas.details.number+'. '+edge.canvas.label,'entity-name'),text('span',endpoints,'entity-context'));
-        row.append(relationSwatch(relationStyle(edge)),content,text('span',relationName(edge),'relation-kind'));
-      }else row.append(relationSwatch(relationStyle(edge)),text('span',endpoints,'relation-endpoints'),text('span',relationName(edge),'relation-kind'));
-      list.append(row);
+      const content=sequence?listEntryContent(edge.canvas.details.number+'. '+edge.canvas.label,endpoints):text('span',endpoints,'relation-endpoints');
+      row.append(relationSwatch(relationStyle(edge)),content,text('span',relationName(edge),'relation-kind'));
+      appendListRow(relationRows,row);
     }
+    if(navigationEdges.length)list.append(text('h2',relationLabel,'list-heading'),relationRows);
     if(isMap && view.nodes.length){
       ++layoutGeneration;lastLayoutKey=undefined;layoutReadyQuery=query;
       syncHeaderMenus([]);refreshWorkspaceModels();
@@ -1474,6 +1510,7 @@
     if(map?.reportError){addNote('Reports unavailable · '+map.reportError);return;}
     if(!entries){addNote('Looking for reports…');return;}
     if(!entries.length){addNote('No linked reports for this snapshot.');return;}
+    const reports=contentList('Verification reports','inspector-list');
     for(const entry of entries){
       const row=button('',()=>openMapVerification(node,entry),'map-report-row');
       const duplicate=entries.some(e=>e.id!==entry.id&&e.title===entry.title);
@@ -1482,8 +1519,9 @@
       const outcome=text('span',title,'map-report-outcome');outcome.dataset.tone=tone;
       row.append(outcome);
       if(open.length)row.append(text('span',open.length+' open question'+(open.length===1?'':'s'),'map-report-note'));
-      slot.append(row);
+      appendListRow(reports,row);
     }
+    slot.append(reports);
   }
   async function openMapVerification(node,entry){
     const map=c4Map,scope=view;
@@ -1532,21 +1570,24 @@
     }
     const children=view.nodes.filter(child=>child.attributes?.['context.owner']===node.id);
     if(children.length){
-      box.append(text('h3','Containers'));
-      for(const child of children)box.append(button(child.name,()=>inspect(child),'map-peer'));
+      const containers=contentList('Containers','inspector-list');
+      for(const child of children)appendListRow(containers,button(child.name,()=>inspect(child),'map-peer'));
+      box.append(text('h3','Containers'),containers);
     }
     const relations=view.edges.filter(edge=>edge.source===node.id||edge.target===node.id);
     box.append(text('h3','Connections'));
     if(!relations.length)box.append(text('p','No connections in this view.'));
+    const connections=contentList('Connections');
     for(const edge of relations){
       const outgoing=edge.source===node.id,peer=nodes.get(outgoing?edge.target:edge.source);
-      const row=document.createElement('div');row.className='map-connection';
+      const row=text('li','','map-connection');
       row.append(text('span',outgoing?'To':'From'));
       if(peer)row.append(button(peer.name,()=>inspect(peer),'map-peer'));
       else row.append(text('span','Endpoint outside this view'));
       const operation=button([relationName(edge),edge.attributes?.['context.technology']].filter(Boolean).join(' · '),()=>inspectSourceEdge(edge),'map-operation');
-      row.append(operation);box.append(row);
+      row.append(operation);connections.append(row);
     }
+    if(relations.length)box.append(connections);
     if(attrs['context.citedSources']?.length){
       box.append(text('h3','Implementation references'));
       for(const source of attrs['context.citedSources'])box.append(text('p',source.path+(source.line?':'+source.line:''),'reference-location'));
@@ -1712,8 +1753,9 @@
       if(!slot.isConnected)return;
       const related=entries.filter(entry=>entry.requirements.some(id=>sequence.requirements.includes(id)));
       if(!related.length)return;
-      slot.append(text('h3','Related verification reports'));
-      for(const entry of related)slot.append(button(entry.title,()=>canvas.openSession(entry.id,true).catch(problem)));
+      const reports=contentList('Related verification reports','inspector-list');
+      for(const entry of related)appendListRow(reports,button(entry.title,()=>canvas.openSession(entry.id,true).catch(problem)));
+      slot.append(text('h3','Related verification reports'),reports);
     }).catch(problem);
   }
   function inspectCanvas(node){

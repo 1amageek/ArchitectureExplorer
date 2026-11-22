@@ -22,6 +22,8 @@ Rendered labels and signatures are plain text. Browser state belongs to the page
 
 The shared renderer uses a native desktop utility layout: a 44 px application toolbar, a 36 px canvas toolbar and a 32 px filter row. System typography, compact controls and neutral panels prioritize usable canvas area. Navigator and Inspector scroll independently; the viewport does not scroll. Responsive layouts may reduce secondary labels, while keeping primary actions and a usable canvas. The standalone export uses the same renderer and density.
 
+Content lists use separate keyboard-operable rows. Titles and supporting text wrap to the available width, and the row grows with its content. The sequence catalogue shows the title, requirements and participant names together. The Canvas List view groups entities and relations separately and shows each sequence message above its endpoints.
+
 The Canvas status bar toggles a read-only Terminal drawer below the drawing area. A new page starts collapsed. The page owns a bounded, timestamped history of observed view loads, diagnostics, index and connection events, and verification status. History is retained across navigation in the tab, including while the drawer is closed. The drawer uses text only and receives event summaries, without serializing request payloads. Opening it uses the existing Canvas resize path. Errors mark the toggle until opened; the History command opens the drawer to show its requested comparison.
 
 The application toolbar keeps search, index status and one More actions button. Its native popover groups the canvas switcher, file commands, extensions and export. Repository mode hides the launcher when those commands are unavailable.
