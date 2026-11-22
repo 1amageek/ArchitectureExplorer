@@ -70,7 +70,8 @@ struct StructurizrContext {
     var workspaceSeen = false, modelSeen = false, viewsSeen = false, explicitRelations = false
     var domains = Set<String>()
     var containerGroups: [String: Set<String>] = [:]
-    var viewSubject: String?, viewKinds = Set<String>(), viewKeys = Set<String>(), includesAll = false
+    var viewKinds: [String: Set<String>] = [:]
+    var viewKeys = Set<String>(), includesAll = false
     func validID(_ s: String) -> Bool {
       s.range(of: #"^[A-Za-z_][A-Za-z0-9_]*$"#, options: .regularExpression) != nil
     }
@@ -132,11 +133,17 @@ struct StructurizrContext {
       case .workspace where words == ["!impliedRelationships", "false"] && !modelSeen:
         explicitRelations = true
       case .views where opens && ["systemContext", "container"].contains(first) && (2...3).contains(w.count):
-        guard elements[w[1]]?.kind == "softwareSystem", viewSubject == nil || viewSubject == w[1],
-          viewKinds.insert(first).inserted, w.count < 3 || viewKeys.insert(w[2]).inserted else {
-          throw invalid("Expected unique views of one declared software system.")
+        let subject = w[1]
+        guard elements[subject]?.kind == "softwareSystem" else {
+          throw invalid("View subject must be a declared software system.")
         }
-        viewSubject = w[1]; includesAll = false; stack.append(.view)
+        guard viewKinds[subject, default: []].insert(first).inserted else {
+          throw invalid("Duplicate \(first) view for \(subject).")
+        }
+        guard w.count < 3 || viewKeys.insert(w[2]).inserted else {
+          throw invalid("Duplicate view key \(w[2]).")
+        }
+        includesAll = false; stack.append(.view)
       case .view where words == ["include", "*"] && !includesAll:
         includesAll = true
       case .model where !opens && (4...5).contains(w.count) && w[1] == "->":
@@ -193,9 +200,11 @@ struct StructurizrContext {
       }
     }
     guard explicitRelations else { throw ArchitectureError("C4_DSL_INVALID", "Map requires !impliedRelationships false before model.") }
-    guard stack.isEmpty, modelSeen, !elements.isEmpty,
-      !viewsSeen || viewKinds == ["systemContext", "container"] else {
+    guard stack.isEmpty, modelSeen, !elements.isEmpty, !viewsSeen || !viewKinds.isEmpty else {
       throw ArchitectureError("C4_DSL_INVALID", "Incomplete model or missing C1/C2 wildcard view.")
+    }
+    if let incomplete = viewKinds.keys.sorted().first(where: { viewKinds[$0] != ["systemContext", "container"] }) {
+      throw ArchitectureError("C4_DSL_INVALID", "Expected both systemContext and container views for \(incomplete).")
     }
     func identity(_ alias: String) -> String { CanonicalJSON.identity(workspaceID + ":structurizr:" + alias) }
     let counts = Dictionary(grouping: elements.values.compactMap(\.owner), by: { $0 }).mapValues(\.count)
@@ -231,7 +240,7 @@ struct StructurizrContext {
           ])
         }
       }
-      if alias == viewSubject { attrs["context.mapSubject"] = .bool(true) }
+      if viewKinds[alias] != nil { attrs["context.mapSubject"] = .bool(true) }
       if el.kind == "softwareSystem" { attrs["context.containerCount"] = .number(Double(counts[alias, default: 0])) }
       nodes.append(Entity(id: identity(alias), kind: el.kind == "container" ? (store ? "dataStore" : "application") : el.kind,
         language: "none", name: el.name, identityKey: alias, entityRevision: modelRevision, anchor: el.anchor, attributes: attrs))

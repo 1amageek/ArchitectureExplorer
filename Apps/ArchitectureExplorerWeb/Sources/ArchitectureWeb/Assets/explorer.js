@@ -1249,7 +1249,7 @@
     mapHost.hidden=!isMap;
     setListView(entering?!!navigation?.list:!$('node-list').hidden);
     $('graph').hidden=isMap;
-    $('container-level').hidden=!container;
+    $('container-level').hidden=!(container||view.extensions?.['c4.context']?.subject);
     const fileOutline=!!view.extensions?.['file.outline'];
     const shared=!!canvas?.active;
     const term=shared?'':$('local-filter').value.trim().toLowerCase();
@@ -1820,6 +1820,11 @@
   $('open-sequences').onclick=()=>openSequenceList();
   $('level').onchange=()=>{
     const level=$('level').value;
+    const c4Subject=view?.extensions?.['c4.container']?.subject||view?.extensions?.['c4.context']?.subject;
+    if(c4Subject&&['context','container'].includes(level)){
+      go({method:'graph.overview',level,focus:c4Subject,snapshotID:view.snapshotID});
+      return;
+    }
     const inContainer=view?.extensions?.['c4.container']&&selected?.attributes?.['context.owner'];
     const inSource=view?.extensions?.['implementation.scope'];
     if((inContainer||inSource)&&['component','function','file'].includes(level)){

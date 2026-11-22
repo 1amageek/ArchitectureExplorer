@@ -113,8 +113,12 @@ The Map profile adds the following constraints to standard Structurizr DSL:
 - Keep unknown ownership explicit. A generated logical boundary describes
   only the scope supported by its inputs. A shared technology or name alone
   cannot establish common ownership. Unconnected declarations are valid.
-- Supply either the model alone or wildcard systemContext/container views of
-  one subject. The Map profile accepts semantic input only. Coordinates, port
+- Supply either the model alone or one wildcard systemContext/container pair
+  for each selected software system. Keys are unique across the workspace.
+  With multiple declared subjects, Home opens the shared context overview.
+  Each system's options open its own context or containers. Switching between
+  those two levels retains the subject and the selected snapshot.
+  The Map profile accepts semantic input only. Coordinates, port
   choices, scripts, remote includes and rendering directives are outside the profile.
   An invalid input produces a diagnostic for the snapshot.
 

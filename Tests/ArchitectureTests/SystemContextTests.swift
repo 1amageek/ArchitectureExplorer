@@ -113,6 +113,80 @@ struct SystemContextTests {
 }
 
 extension SystemContextTests {
+  @Test(.timeLimit(.minutes(1))) func structurizrWorkspaceOpensDistinctSystemViews() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { do { try FileManager.default.removeItem(at: root) } catch { Issue.record(error) } }
+    let paths = try WorkspacePaths(root.path)
+    let store = try SQLiteGraphStore(path: root.appendingPathComponent("index.db").path, workspaceID: paths.workspaceID)
+    let indexer = WorkspaceIndexer(paths: paths, store: store)
+    let file = root.appendingPathComponent("ARCHITECTURE.dsl")
+    let model = """
+      workspace {
+        !impliedRelationships false
+        model {
+          group "Writing" {
+            author = person "Author"
+            editor = softwareSystem "Editor" {
+              desktop = container "Desktop"
+            }
+          }
+          group "Publishing" {
+            publisher = person "Publisher"
+            service = softwareSystem "Publication" {
+              delivery = container "Delivery"
+            }
+          }
+          author -> editor "Writes documents"
+          author -> desktop "Edits text"
+          publisher -> service "Publishes documents"
+          publisher -> delivery "Delivers files"
+        }
+        views {
+          systemContext editor EditorContext {
+            include *
+          }
+          container editor EditorContainers {
+            include *
+          }
+          systemContext service ServiceContext {
+            include *
+          }
+          container service ServiceContainers {
+            include *
+          }
+        }
+      }
+      """
+    try Data(model.utf8).write(to: file)
+    let snapshot = try await indexer.reconcile()
+    let engine = GraphEngine()
+    let overview = GraphQuery(method: "graph.overview", level: "context")
+    let map = try engine.view(overview, snapshot: snapshot)
+    #expect(Set(map.nodes.map(\.name)) == ["Author", "Editor", "Publisher", "Publication"])
+    #expect(map.edges.count == 2)
+    for (system, person, child) in [("Editor", "Author", "Desktop"), ("Publication", "Publisher", "Delivery")] {
+      let subject = try #require(map.nodes.first { $0.name == system })
+      let c1 = try engine.view(.init(method: "graph.overview", snapshotID: snapshot.id, focus: subject.id, level: "context"), snapshot: snapshot)
+      let c2 = try engine.view(.init(method: "graph.overview", snapshotID: snapshot.id, focus: subject.id, level: "container"), snapshot: snapshot)
+      #expect(Set(c1.nodes.map(\.name)) == [system, person])
+      #expect(Set(c2.nodes.map(\.name)) == [system, person, child])
+      #expect(c1.edges.count == 1 && c2.edges.count == 1)
+      #expect(c1.evidence.contains { $0.anchor?.path == "ARCHITECTURE.dsl" })
+      #expect(c2.evidence.contains { $0.anchor?.path == "ARCHITECTURE.dsl" })
+      #expect(c1.snapshotID == snapshot.id && c2.snapshotID == snapshot.id)
+    }
+    let duplicate = model.replacingOccurrences(of: "ServiceContext", with: "EditorContext")
+    try Data(duplicate.utf8).write(to: file)
+    let invalid = try engine.view(overview, snapshot: await indexer.reconcile())
+    #expect(invalid.diagnostics.contains { $0.code == "C4_DSL_INVALID" && $0.message.contains("Duplicate view key") })
+    let incomplete = model.replacingOccurrences(of: "container service ServiceContainers", with: "container editor ServiceContainers")
+    try Data(incomplete.utf8).write(to: file)
+    let conflicting = try engine.view(overview, snapshot: await indexer.reconcile())
+    #expect(conflicting.diagnostics.contains { $0.code == "C4_DSL_INVALID" && $0.message.contains("Duplicate container view") })
+    #expect(try engine.view(overview, snapshot: await indexer.snapshot(snapshot.id)).nodes == map.nodes)
+  }
+
   @Test(.timeLimit(.minutes(1))) func structurizrViewsShareIdentityAndInvalidEditsInvalidateHead() async throws {
     let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

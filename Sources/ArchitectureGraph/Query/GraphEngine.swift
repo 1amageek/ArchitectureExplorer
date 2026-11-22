@@ -36,7 +36,10 @@ public struct GraphEngine: GraphQuerying {
     let containment = snapshot.facts.filter { $0.kind == "contains" }
     let outlineParents = Dictionary(grouping: containment, by: \.target)
     let mapProducers: Set<String> = ["c4.backstage", "c4.structurizr"]
-    let contextSubject = query.focus ?? (contextView ? ordered.first { $0.attributes["context.mapSubject"]?.bool == true }?.id : nil)
+    let declaredSubjects = contextView && query.focus == nil
+      ? Array(ordered.lazy.filter { $0.attributes["context.mapSubject"]?.bool == true }.prefix(2))
+      : []
+    let contextSubject = query.focus ?? (declaredSubjects.count == 1 ? declaredSubjects.first?.id : nil)
     let eligible = snapshot.facts.filter {
       if containerView { return mapProducers.contains($0.producer) && $0.scope == query.focus }
       if contextView { return mapProducers.contains($0.producer) && $0.scope == "workspace" }

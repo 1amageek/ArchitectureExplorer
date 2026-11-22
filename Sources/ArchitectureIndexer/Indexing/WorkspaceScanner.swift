@@ -198,7 +198,7 @@ public struct WorkspaceScanner: Sendable {
     inputs["@provider"] = "skeleton-1215a3b+tree-sitter-0.25.0+syntax-v9"
     inputs["@designDocuments"] = "markdown-v1"
     inputs["@indexer"] = "snapshot-lifecycle-v2"
-    inputs["@c4"] = "backstage-v3+structurizr-v8"
+    inputs["@c4"] = "backstage-v3+structurizr-v9"
     inputs["@swiftpm"] = "literal-manifest-v1"
     inputs["@cfg"] = ControlFlowProvider.version
     inputs["@toolchain"] = "swift-6.4.1"
