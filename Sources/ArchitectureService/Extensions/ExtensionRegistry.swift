@@ -12,14 +12,12 @@ extension ExtensionRuntime {
       let manifest = try ExtensionRules.manifest(params["manifest"])
       guard params["profile"] == .null, params["scope"] == .null || params["scope"] == .string("workspace") else { throw failure("UNSUPPORTED_CAPABILITY", "Only an explicitly negotiated profile and workspace scope are supported.") }
       let digest = CanonicalJSON.digest(try CanonicalJSON.encode(manifest))
-      if let grant = state!.grants.values.first(where: { $0.manifest.extensionID == manifest.extensionID && $0.binaryDigest == peer.binaryDigest && $0.codeIdentity == peer.codeIdentity && $0.manifest == manifest && !$0.disabled }), params["resumeCredential"].string == grant.resumeCredential {
-        sessions = sessions.filter { $0.value.expiresAt > now() }
-        guard sessions.count < 64 else { throw failure("RESOURCE_LIMIT", "Session budget exceeded.") }
-        sessions = sessions.filter { $0.value.grantID != grant.id && $0.value.expiresAt > now() }
-        pending[grant.id] = nil
-        let session = Session(id: UUID().uuidString, grantID: grant.id, peer: peer.auditIdentity, expiresAt: now() + 15, window: now())
-        let token = UUID().uuidString + UUID().uuidString; sessions[token] = session
-        return try JSONValue.encode(ExtensionRegistration(id: grant.id, providerID: manifest.extensionID, sessionID: session.id, credential: token, resumeCredential: grant.resumeCredential, grantedPermissions: grant.permissions, expiresAt: session.expiresAt))
+      if bundledProvider?.matches(peer, manifest: manifest) == true,
+         let grant = try await companionGrant(peer: peer, manifest: manifest) {
+        return try openSession(grant, peer: peer)
+      }
+      if let grant = state!.grants.values.first(where: { $0.bundled != true && $0.binaryDigest == peer.binaryDigest && $0.codeIdentity == peer.codeIdentity && $0.manifest == manifest && !$0.disabled }), params["resumeCredential"].string == grant.resumeCredential {
+        return try openSession(grant, peer: peer)
       }
       pending = pending.filter { $0.value.expiresAt > now() && state!.grants[$0.key]?.disabled != false }
       let id = CanonicalJSON.identity(peer.auditIdentity + ":" + digest)
@@ -72,6 +70,44 @@ extension ExtensionRuntime {
       return .array(try state!.grants.values.sorted { $0.id < $1.id }.map { try publicGrant($0) })
     default: throw failure("UNSUPPORTED_CAPABILITY", "Unknown extension registry method.")
     }
+  }
+  private func companionGrant(peer: ConnectionPeer, manifest: ExtensionManifest) async throws -> ExtensionState.Grant? {
+    let id = CanonicalJSON.identity(workspaceID + ":bundled-provider:" + manifest.extensionID)
+    let previous = state!.grants[id]
+    guard previous?.disabled != true else { return nil }
+    if let previous, previous.codeIdentity == peer.codeIdentity, previous.binaryDigest == peer.binaryDigest,
+       previous.executable == peer.executable, previous.manifest == manifest { return previous }
+
+    let legacy = state!.grants.values.filter { $0.manifest.extensionID == manifest.extensionID && $0.bundled != true }
+    let activeLegacy = legacy.first { !$0.disabled }
+    guard previous != nil || legacy.isEmpty || activeLegacy != nil else { return nil }
+    let permissions = (previous ?? activeLegacy).map { grant in
+      manifest.requestedPermissions.filter(grant.permissions.contains)
+    } ?? manifest.requestedPermissions
+    let grant = ExtensionState.Grant(id: id, manifest: manifest, binaryDigest: peer.binaryDigest,
+      codeIdentity: peer.codeIdentity, executable: peer.executable, resumeCredential: UUID().uuidString + UUID().uuidString,
+      permissions: permissions, bundled: true)
+    var value = state!
+    for other in value.grants.keys where other != id && value.grants[other]!.manifest.extensionID == manifest.extensionID {
+      value.grants[other]!.disabled = true
+    }
+    value.grants[id] = grant
+    try await persist(value)
+    sessions = sessions.filter { state!.grants[$0.value.grantID]?.disabled == false && $0.value.grantID != id }
+    pending = pending.filter { $0.value.manifest.extensionID != manifest.extensionID }
+    return grant
+  }
+  private func openSession(_ grant: ExtensionState.Grant, peer: ConnectionPeer) throws -> JSONValue {
+    sessions = sessions.filter { $0.value.expiresAt > now() }
+    guard sessions.count < 64 else { throw failure("RESOURCE_LIMIT", "Session budget exceeded.") }
+    sessions = sessions.filter { $0.value.grantID != grant.id }
+    pending[grant.id] = nil
+    let session = Session(id: UUID().uuidString, grantID: grant.id, peer: peer.auditIdentity, expiresAt: now() + 15, window: now())
+    let token = UUID().uuidString + UUID().uuidString
+    sessions[token] = session
+    return try JSONValue.encode(ExtensionRegistration(id: grant.id, providerID: grant.manifest.extensionID,
+      sessionID: session.id, credential: token, resumeCredential: grant.resumeCredential,
+      grantedPermissions: grant.permissions, expiresAt: session.expiresAt))
   }
   func publicGrant(_ grant: ExtensionState.Grant) throws -> JSONValue {
     let connected = sessions.values.contains { $0.grantID == grant.id && $0.expiresAt > now() }

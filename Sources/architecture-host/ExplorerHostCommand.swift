@@ -23,16 +23,19 @@ struct ExplorerHostCommand {
       throw ArchitectureError("INVALID_ARGUMENT", "Expected a host mode and --workspace PATH.", exitCode: 2)
     }
     let client = try ArchitectureClient(workspace: arguments[2])
+    guard let executable = Bundle.main.executableURL else {
+      throw ArchitectureError("DAEMON_UNAVAILABLE", "Cannot locate the packaged Explorer host.", exitCode: 3)
+    }
     let options = Array(arguments.dropFirst(3))
     switch (arguments[0], options) {
     case ("start", []):
-      guard let executable = Bundle.main.executableURL else {
-        throw ArchitectureError("DAEMON_UNAVAILABLE", "Cannot locate the packaged Explorer host.", exitCode: 3)
-      }
+      let companion = try InstalledInvarProvider.identify(host: executable)
       try await ArchitectureDaemonLauncher.ensure(
-        client, executable: executable, arguments: ["serve", "--workspace", client.paths.root.path])
+        client, executable: executable, arguments: ["serve", "--workspace", client.paths.root.path],
+        expectedCompanionIdentity: companion?.identity)
     case ("serve", []):
-      try await ArchitectureDaemonLauncher.serve(client.paths)
+      let companion = try InstalledInvarProvider.identify(host: executable)
+      try await ArchitectureDaemonLauncher.serve(client.paths, bundledProvider: companion)
     case ("stop", []):
       _ = try await client.call("daemon.stop")
     case ("browser", []), ("browser", ["--no-open"]), ("browser", ["--codex-browser"]):

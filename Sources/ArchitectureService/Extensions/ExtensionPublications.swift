@@ -30,7 +30,7 @@ extension ExtensionRuntime {
       }
       guard value.runs.count < 128, (value.generations[slot] ?? 0) < Int.max - 1 else { throw failure("RESOURCE_LIMIT", "Run retention/generation budget exceeded.") }
       let generation = (value.generations[slot] ?? 0) + 1
-      let run = ExtensionState.Run(id: id, providerID: grant.manifest.extensionID, registrationID: grant.id, slot: slot, binding: binding, generation: generation, contributionKinds: kinds, viewIDs: views, publicationID: UUID().uuidString, sessionID: session.id, expiresAt: now() + 3600)
+      let run = ExtensionState.Run(id: id, providerID: grant.manifest.extensionID, registrationID: grant.id, slot: slot, binding: binding, generation: generation, contributionKinds: kinds, viewIDs: views, publicationID: UUID().uuidString, sessionID: session.id, expiresAt: now() + 3600, providerVersion: grant.manifest.version)
       value.generations[slot] = generation; value.runs[id] = run
       try await persist(value, provider: grant.manifest.extensionID, cause: id)
       return try JSONValue.encode(run)
@@ -98,7 +98,8 @@ extension ExtensionRuntime {
       let provider = state!.grants[run.registrationID]
       let known = Set(run.binding.entityIDs).isSubset(of: Set(snapshot.entities.map(\.id))) && Set(run.binding.factIDs).isSubset(of: Set(snapshot.facts.map(\.id)))
       let applicability = !known ? "unmatched" : run.binding.snapshotID == snapshot.id && run.binding.inputManifestDigest == current ? "unknown" : "stale"
-      return .object(["runID": .string(run.id), "publicationID": .string(run.publicationID), "generation": .number(Double(run.generation)), "providerID": .string(run.providerID), "applicability": .string(applicability), "binding": try JSONValue.encode(run.binding), "contributions": try JSONValue.encode(run.contributions.values.sorted { $0.id < $1.id }), "providerVersion": provider.map { .string($0.manifest.version) } ?? .null, "provider": provider.map { .string($0.manifest.displayName) } ?? .string(run.providerID)])
+      let version = run.providerVersion ?? provider?.manifest.version
+      return .object(["runID": .string(run.id), "publicationID": .string(run.publicationID), "generation": .number(Double(run.generation)), "providerID": .string(run.providerID), "applicability": .string(applicability), "binding": try JSONValue.encode(run.binding), "contributions": try JSONValue.encode(run.contributions.values.sorted { $0.id < $1.id }), "providerVersion": version.map(JSONValue.string) ?? .null, "provider": provider.map { .string($0.manifest.displayName) } ?? .string(run.providerID)])
     }
     let registrations = try state!.grants.values.sorted { $0.id < $1.id }.map { try publicGrant($0) }
     let actions = try state!.dispatches.values.sorted { $0.intent.requestID < $1.intent.requestID }.map { item -> JSONValue in

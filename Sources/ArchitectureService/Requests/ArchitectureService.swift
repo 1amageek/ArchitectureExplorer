@@ -15,6 +15,7 @@ public actor ArchitectureService {
   private let snapshotAccess = SnapshotAccess()
   private let canvas: any CanvasSessionManaging = CanvasSessions()
   private let extensions: ExtensionRuntime
+  private let bundledProviderIdentity: String?
   private let indexer: WorkspaceIndexer
   private let epoch = UUID().uuidString
   private var stopping = false
@@ -28,11 +29,14 @@ public actor ArchitectureService {
   private var viewCacheBytes = 0
   public init(
     paths: WorkspacePaths, store: any GraphStore,
-    provider: any FrontendProvider = SkeletonFrontend(), trustedHostDigests: Set<String> = []
+    provider: any FrontendProvider = SkeletonFrontend(), trustedHostDigests: Set<String> = [],
+    bundledProvider: BundledProvider? = nil
   ) {
     self.paths = paths
     self.store = store
-    extensions = ExtensionRuntime(workspaceID: paths.workspaceID, store: store, hostDigests: trustedHostDigests)
+    bundledProviderIdentity = bundledProvider?.identity
+    extensions = ExtensionRuntime(workspaceID: paths.workspaceID, store: store, hostDigests: trustedHostDigests,
+                                  bundledProvider: bundledProvider)
     indexer = WorkspaceIndexer(paths: paths, store: store, provider: provider)
   }
   public func shouldStop() -> Bool { stopping }
@@ -136,6 +140,7 @@ public actor ArchitectureService {
         "capabilities": .array([.string("snapshot.scan.v1"), .string("inputs.lease.v1"), .string("extensions.aex-1.3")]),
         "protocolVersion": .string("1.0"), "workspaceID": .string(paths.workspaceID),
         "pid": .number(Double(getpid())), "processIdentity": .string(epoch),
+        "bundledProviderIdentity": bundledProviderIdentity.map(JSONValue.string) ?? .null,
       ])
     case "daemon.stop":
       return .object(["stopping": .bool(true), "workspaceID": .string(paths.workspaceID)])

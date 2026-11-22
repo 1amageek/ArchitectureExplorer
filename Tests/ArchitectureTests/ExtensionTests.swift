@@ -22,13 +22,14 @@ struct ExtensionTests {
     let snapshot: Snapshot
     let clock: Clock
     let peer = ConnectionPeer(processID: 100, auditIdentity: "peer-a", executable: "/provider-a", codeIdentity: "code-a", binaryDigest: "binary-a")
-    init() throws {
+    init(bundledProvider: BundledProvider? = nil) throws {
       root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
       try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
       store = try SQLiteGraphStore(path: root.appendingPathComponent("state.sqlite").path, workspaceID: "workspace")
       clock = Clock()
       let clock = clock
-      runtime = ExtensionRuntime(workspaceID: "workspace", store: store, hostDigests: [], now: { clock.now() })
+      runtime = ExtensionRuntime(workspaceID: "workspace", store: store, hostDigests: [],
+                                 bundledProvider: bundledProvider, now: { clock.now() })
       snapshot = Snapshot(id: "snapshot", workspaceID: "workspace", generation: 1, contextDigest: "context", inputs: ["A.swift": CanonicalJSON.digest("func a() {}")], entities: [Entity(id: "a", kind: "function", language: "swift", name: "a", identityKey: "a", entityRevision: "1")], facts: [], evidence: [], coverage: [])
     }
     func cleanup() async throws { await runtime.shutdown(); try FileManager.default.removeItem(at: root) }
@@ -77,6 +78,64 @@ struct ExtensionTests {
     func report(_ intent: ActionIntent, registration: ExtensionRegistration, run: JSONValue, revision: Int, state: String) async throws -> JSONValue {
       try await runtime.action("actions.state", params: .object(["requestID": .string(intent.requestID), "jobID": .string("job"), "runID": run["id"], "revision": .number(Double(revision)), "state": .string(state)]), peer: peer, credential: registration.credential, snapshot: nil)
     }
+  }
+
+  @Test(.timeLimit(.minutes(1))) func bundledProviderUpdatesWithNoNewGrantForUnpairedPeers() async throws {
+    let installed = BundledProvider(executable: "/provider-a", digest: "binary-a",
+      extensionID: "invar", permissions: [.graphRead, .runsWrite])
+    let fixture = try Fixture(bundledProvider: installed)
+    let context: JSONValue = .object([:])
+    let initial = ExtensionManifest(extensionID: "invar", displayName: "Invar", version: "2.0.0",
+                                     requestedPermissions: [.graphRead, .runsWrite])
+    let parameters: JSONValue = .object(["manifest": try JSONValue.encode(initial)])
+    let registration = try await fixture.runtime.registry("extensions.register", params: parameters,
+      peer: fixture.peer, credential: nil).decode(ExtensionRegistration.self)
+    #expect(Set(registration.grantedPermissions) == [.graphRead, .runsWrite])
+    let copy = ConnectionPeer(processID: 102, auditIdentity: "copy", executable: "/copy",
+                              codeIdentity: "code-a", binaryDigest: "binary-a")
+    do {
+      let resume: JSONValue = .object(["manifest": parameters["manifest"], "resumeCredential": .string(registration.resumeCredential)])
+      _ = try await fixture.runtime.registry("extensions.register", params: resume, peer: copy, credential: nil)
+      Issue.record("An executable outside the bundle resumed a bundled grant")
+    } catch let error as ArchitectureError { #expect(error.code == "APPROVAL_REQUIRED") }
+    do {
+      _ = try await fixture.runtime.registry("extensions.pending", params: context, peer: fixture.peer, credential: registration.credential)
+      Issue.record("The bundled Provider received host administration")
+    } catch let error as ArchitectureError { #expect(error.code == "POLICY_DENIED") }
+    let broader = ExtensionManifest(extensionID: "invar", displayName: "Invar", version: "2.0.0",
+                                     requestedPermissions: [.graphRead, .runsWrite, .canvasControl])
+    do {
+      _ = try await fixture.runtime.registry("extensions.register",
+        params: .object(["manifest": try JSONValue.encode(broader)]), peer: fixture.peer, credential: nil)
+      Issue.record("The bundled Provider exceeded the distribution permission ceiling")
+    } catch let error as ArchitectureError { #expect(error.code == "APPROVAL_REQUIRED") }
+    _ = try await fixture.runtime.registry("extensions.permissions",
+      params: .object(["id": .string(registration.id), "permissions": .array([.string("graph.read")])]),
+      peer: nil, credential: nil)
+    await fixture.runtime.shutdown()
+
+    let updated = BundledProvider(executable: "/provider-b", digest: "binary-b",
+      extensionID: "invar", permissions: [.graphRead, .runsWrite])
+    let replacement = ExtensionRuntime(workspaceID: "workspace", store: fixture.store, hostDigests: [], bundledProvider: updated)
+    let currentPeer = ConnectionPeer(processID: 103, auditIdentity: "peer-b", executable: updated.executable,
+                                     codeIdentity: "code-b", binaryDigest: updated.digest)
+    let manifest = ExtensionManifest(extensionID: "invar", displayName: "Invar", version: "2.0.1",
+      requestedPermissions: [.graphRead, .runsWrite])
+    let current = try await replacement.registry("extensions.register",
+      params: .object(["manifest": try JSONValue.encode(manifest)]), peer: currentPeer, credential: nil)
+      .decode(ExtensionRegistration.self)
+    #expect(current.id == registration.id && current.resumeCredential != registration.resumeCredential)
+    #expect(current.grantedPermissions == [.graphRead])
+    #expect(try await replacement.registry("extensions.pending", params: context, peer: nil, credential: nil).array.isEmpty)
+    _ = try await replacement.registry("extensions.unregister",
+      params: .object(["id": .string(current.id)]), peer: nil, credential: nil)
+    do {
+      _ = try await replacement.registry("extensions.register",
+        params: .object(["manifest": try JSONValue.encode(manifest)]), peer: currentPeer, credential: nil)
+      Issue.record("The bundled Provider was automatically restored after revocation")
+    } catch let error as ArchitectureError { #expect(error.code == "APPROVAL_REQUIRED") }
+    await replacement.shutdown()
+    try await fixture.cleanup()
   }
   @Test(.timeLimit(.minutes(1))) func manifestSchemaAndPeerPermissionsRejectBeforeEffects() async throws {
     let f = try Fixture(), manifest = f.manifest()

@@ -5,18 +5,24 @@ import Foundation
 
 package enum ArchitectureDaemonLauncher {
   package static func serve(
-    _ paths: WorkspacePaths, trustedHostDigests: Set<String> = []
+    _ paths: WorkspacePaths, trustedHostDigests: Set<String> = [], bundledProvider: BundledProvider? = nil
   ) async throws {
     try paths.prepareState()
     let store = try SQLiteGraphStore(
       path: paths.state.appendingPathComponent("graph.sqlite").path, workspaceID: paths.workspaceID)
-    let daemon = try ArchitectureDaemon(paths: paths, store: store, trustedHostDigests: trustedHostDigests)
+    let daemon = try ArchitectureDaemon(paths: paths, store: store, trustedHostDigests: trustedHostDigests, bundledProvider: bundledProvider)
     try await daemon.run()
   }
 
   package static func ensure(
-    _ client: ArchitectureClient, executable: URL, arguments: [String]
+    _ client: ArchitectureClient, executable: URL, arguments: [String], expectedCompanionIdentity: String? = nil
   ) async throws {
+    func verifyCompanion(_ hello: JSONValue) throws {
+      if let expectedCompanionIdentity, hello["bundledProviderIdentity"].string != expectedCompanionIdentity {
+        throw ArchitectureError("EXPLORER_RESTART_REQUIRED",
+          "The running Explorer belongs to a different installation. Stop the previous workspace index before restarting Invar.", exitCode: 7)
+      }
+    }
     do {
       let hello = try await client.call("daemon.hello")
       guard hello["workspaceID"].string == client.paths.workspaceID,
@@ -25,6 +31,7 @@ package enum ArchitectureDaemonLauncher {
         throw ArchitectureError(
           "PROTOCOL_MISMATCH", "Connected daemon identity differs.", exitCode: 7)
       }
+      try verifyCompanion(hello)
       return
     } catch let error as ArchitectureError where error.code == "CONNECTION_FAILED" {}
     try client.paths.prepareState()
@@ -50,6 +57,7 @@ package enum ArchitectureDaemonLauncher {
         if hello["workspaceID"].string == client.paths.workspaceID,
           hello["processIdentity"].string != nil
         {
+          try verifyCompanion(hello)
           return
         }
         throw ArchitectureError("PROTOCOL_MISMATCH", "Daemon identity mismatch.", exitCode: 7)

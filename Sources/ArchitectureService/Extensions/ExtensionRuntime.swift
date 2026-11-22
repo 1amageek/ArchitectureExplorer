@@ -21,6 +21,7 @@ actor ExtensionRuntime {
   let workspaceID: String
   let store: any GraphStore
   let hostDigests: Set<String>
+  let bundledProvider: BundledProvider?
   let epoch = UUID().uuidString
   let now: @Sendable () -> Double
   var state: ExtensionState?
@@ -32,8 +33,10 @@ actor ExtensionRuntime {
   var leaseOwners: [String: LeaseOwner] = [:]
   var stopped = false
 
-  init(workspaceID: String, store: any GraphStore, hostDigests: Set<String>, now: @escaping @Sendable () -> Double = ExtensionRuntime.monotonicTime()) {
-    self.workspaceID = workspaceID; self.store = store; self.hostDigests = hostDigests; self.now = now
+  init(workspaceID: String, store: any GraphStore, hostDigests: Set<String>,
+       bundledProvider: BundledProvider? = nil, now: @escaping @Sendable () -> Double = ExtensionRuntime.monotonicTime()) {
+    self.workspaceID = workspaceID; self.store = store; self.hostDigests = hostDigests
+    self.bundledProvider = bundledProvider; self.now = now
   }
   nonisolated static func monotonicTime() -> @Sendable () -> Double {
     let clock = ContinuousClock(), start = ContinuousClock.now, wall = Date().timeIntervalSince1970

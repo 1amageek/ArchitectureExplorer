@@ -12,6 +12,7 @@ struct ExtensionState: Codable, Sendable {
     let resumeCredential: String
     var permissions: [ExtensionPermission]
     var disabled = false
+    var bundled: Bool?
   }
   struct Run: Codable, Sendable {
     let id: String
@@ -30,6 +31,7 @@ struct ExtensionState: Codable, Sendable {
     var completion = "pending"
     var committed = false
     var manifestDigest: String?
+    var providerVersion: String?
   }
   struct Dispatch: Codable, Sendable {
     let intent: ActionIntent

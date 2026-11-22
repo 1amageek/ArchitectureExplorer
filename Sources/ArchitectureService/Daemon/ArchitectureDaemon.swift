@@ -9,11 +9,12 @@ public actor ArchitectureDaemon {
   private let hostDigests: Set<String>
   private let service: ArchitectureService
   private let paths: WorkspacePaths
-  public init(paths: WorkspacePaths, store: any GraphStore, trustedHostDigests: Set<String> = []) throws {
+  public init(paths: WorkspacePaths, store: any GraphStore, trustedHostDigests: Set<String> = [],
+              bundledProvider: BundledProvider? = nil) throws {
     self.paths = paths
     let identity = try ConnectionPeer.current()
     hostDigests = trustedHostDigests.union([identity.binaryDigest])
-    service = ArchitectureService(paths: paths, store: store, trustedHostDigests: hostDigests)
+    service = ArchitectureService(paths: paths, store: store, trustedHostDigests: hostDigests, bundledProvider: bundledProvider)
   }
   public func run() async throws {
     ProcessSignals.install()

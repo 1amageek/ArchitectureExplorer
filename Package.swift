@@ -117,7 +117,7 @@ let package = Package(
       ], path: "Apps/ArchitectureExplorerWeb/Sources/ArchitectureServer",
       exclude: ["DESIGN.md", "Hosting/DESIGN.md", "Session/DESIGN.md", "PageDelivery/DESIGN.md"]),
     .executableTarget(
-      name: "architecture-host", dependencies: ["ArchitectureClient", "ArchitectureCore", "ArchitectureService", "ArchitectureServer"],
+      name: "architecture-host", dependencies: ["ArchitectureClient", "ArchitectureCore", "ArchitectureExtensions", "ArchitectureService", "ArchitectureServer"],
       exclude: ["DESIGN.md"]),
     .testTarget(
       name: "ArchitectureTests",

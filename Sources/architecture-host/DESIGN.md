@@ -1,3 +1,5 @@
 # architecture-host
 
 The embedded distribution entry point uses the existing Explorer daemon launcher and Web server. The index and browser modes run as separate processes of this executable. Index and browser share the trusted host binary digest, while the external Provider retains its own identity and permissions. Only the installer copies this executable and its resource bundles. Each running index retains the workspace’s canonical socket and lock.
+
+For the Invar distribution, the host pins the installed companion executable at its canonical location beside the resource bundle. The service admits the bundled Provider by its kernel-reported executable path and binary digest with a fixed extension ID and permission ceiling. The companion receives a normal peer-bound Provider session. The workspace host APIs, third-party registration and action confirmation retain their existing checks. On a distribution update the replacement index pins the new executable and opens a new registration while retaining previous publications, prior permission reductions and explicit revocation.
