@@ -73,6 +73,12 @@ Post-merge observation: a trusted self-project metadata refresh returns `INVALID
 
 Explorer owns the specification, snapshot projection and live Home route. The first implemented input profile is the workspace Backstage catalog (System, Component and API). Typed MCP client/endpoint, IaC and trace adapters, person attribution, and automatic association of Context relationships with provider verification records remain open acceptance items. No workspace-specific Context manifest is required.
 
+## Workspace sequences
+
+- [x] Capture root Structurizr dynamic views with their Map participants and cited source on the same snapshot.
+- [x] Navigate from Workspace or a Map participant, open the sequence before awaiting its data, and inspect messages and replies.
+- [x] Verify historical reads, stale and missing citations, invalid model replacement, and invalid imported identities in WorkspaceSequenceTests.
+
 ## Destination-first verification navigation
 
 The Map options menu now prepares and executes the Invar verify-project action for a system/container. It enters the destination before availability/input reads and shows the new action's complete three-phase report after publication. Existing reports remain accessible through the context menu. [Project action evidence](Documentation/CANVAS-VERIFICATION.md#executable-project-verification) records the actual Formal run and regression scope.

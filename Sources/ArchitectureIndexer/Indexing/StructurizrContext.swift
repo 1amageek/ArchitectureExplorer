@@ -26,6 +26,9 @@ struct StructurizrContext {
     let start: Int, end: Int
   }
 
+  private(set) var sequenceRelationships: [StructurizrSequence.Relationship] = []
+  private(set) var viewKeys: Set<String> = []
+
   private struct Relation {
     let source: String, target: String, label: String, technology: String
     let declaration: JSONValue
@@ -36,7 +39,7 @@ struct StructurizrContext {
     case workspace, model, domain(String), system(String), containerGroup(owner: String, name: String), views, view
   }
 
-  private static func tokens(_ line: Substring) throws -> [String] {
+  static func tokens(_ line: Substring) throws -> [String] {
     var result: [String] = []
     var rest = line[...]
     while !rest.isEmpty {
@@ -237,7 +240,11 @@ struct StructurizrContext {
     struct Link: Hashable { let scope: String, from: String, to: String, label: String, technology: String }
     var links: [Link: Set<String>] = [:]
     var declarations: [String: JSONValue] = [:]
+    self.viewKeys = viewKeys
     for r in relations {
+      sequenceRelationships.append(.init(source: r.source, target: r.target, label: r.label,
+        technology: r.technology, declaration: .init(path: r.anchor.path,
+          line: r.declaration["line"].int ?? 1, text: r.declaration["text"].string ?? "")))
       let fromOwner = elements[r.source]!.owner, toOwner = elements[r.target]!.owner
       let from = fromOwner ?? r.source, to = toOwner ?? r.target
       let e = support(r.anchor)

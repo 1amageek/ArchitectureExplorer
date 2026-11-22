@@ -334,6 +334,17 @@ public actor ArchitectureService {
         collection: params["collection"].string ?? "entities", cursor: params["cursor"].string,
         limit: Self.integer(params, "limit", default: 100), maximumBytes: Self.integer(params, "maximumBytes", default: 1024 * 1024))
       return try JSONValue.encode(value)
+    case "workspace.sequences":
+      try Self.snapshotParameters(params, strings: ["snapshotID", "subjectID"], integers: [])
+      let snapshot = try await indexer.snapshot(params["snapshotID"].string)
+      return try SequenceQueries.list(in: snapshot, subjectID: params["subjectID"].string)
+    case "workspace.sequence":
+      try Self.snapshotParameters(params, strings: ["snapshotID", "key"], integers: [])
+      guard let snapshotID = params["snapshotID"].string, let key = params["key"].string else {
+        throw ArchitectureError("INVALID_ARGUMENT", "A pinned snapshot and scenario key are required.", exitCode: 2)
+      }
+      let snapshot = try await indexer.snapshot(snapshotID)
+      return try SequenceQueries.document(in: snapshot, key: key)
     case "workspace.specification":
       try Self.snapshotParameters(params, strings: ["snapshotID"], integers: [])
       let snapshot = try await indexer.snapshot(params["snapshotID"].string)

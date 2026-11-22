@@ -230,3 +230,11 @@ Components retain the application kind and resources retain the data store kind.
 Data artifacts are diagram objects. Catalog files, API contracts and payloads do
 not automatically become C4 containers. A title or a product name never selects
 a subtype. Previously saved views retain the detail recorded in their snapshot.
+
+## Workspace sequences
+
+A root `SEQUENCES.dsl` extends the root `ARCHITECTURE.dsl` using Structurizr's local workspace extension syntax. It contains a `views` block with named `dynamic` views. A view uses an explicit stable key, a title or description, and ordered interactions between existing architecture elements. The supported profile uses one view per alternative outcome, implicit order or consecutive explicit integer order, and a unique matching architecture relationship. A response can reuse the reverse of an earlier matching request in the same scenario. Unsupported input produces a path and line diagnostic, and leaves the C4 Map available.
+
+Each view can declare an `invar.requirements` property with space-separated requirement IDs. Preceding `// Source: path:line sha256=<digest>` comments cite one or more requirements, source statements, or tests for a step. Capture only bounded regular workspace files for these references. A citation whose digest or line cannot be confirmed remains unresolved or stale with no substitute excerpt.
+
+The Indexer resolves the input against the architecture and evidence of the same capture, and persists the result with the immutable snapshot. The service serves snapshot-bound lists and Canvas documents; invalid replacement removes the live sequences while historical snapshots retain their own definitions. Diagram steps are declared interactions. Evidence excerpts and architecture links support review, and carry no execution or verification verdict.

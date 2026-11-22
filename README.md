@@ -18,6 +18,8 @@ Keep the `explore` command running while using the browser. Add `--no-open` to r
 
 The browser opens at **System Context**. A root `ARCHITECTURE.dsl` is the authoritative Map model when present. Explorer also supports typed Backstage catalog declarations. If neither supplies a resolved system boundary, use **Browse modules** to start from the indexed implementation. [C4 model inputs](Documentation/C4-CONTEXT-SPEC.md)
 
+Open **Sequences** from the source toolbar or a Map node's options. The repository's root `SEQUENCES.dsl` extends `ARCHITECTURE.dsl` and defines named Structurizr dynamic views. Choose a scenario to see its participants and ordered interactions. Select a message to inspect the original declaration, the architecture relationship and the cited source on the same snapshot.
+
 ```mermaid
 flowchart TD
     C1["C1 — System Context · Map"] -->|"Open containers"| C2["C2 — Containers · Map"]

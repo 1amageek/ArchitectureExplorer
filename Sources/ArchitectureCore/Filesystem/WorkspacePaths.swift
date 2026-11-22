@@ -2,6 +2,7 @@ import Foundation
 
 public struct WorkspacePaths: Sendable {
   public static let architectureModelFilename = "ARCHITECTURE.dsl"
+  public static let sequenceModelFilename = "SEQUENCES.dsl"
   public let root: URL
   public let workspaceID: String
   public let state: URL

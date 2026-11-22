@@ -13,12 +13,13 @@ public struct Snapshot: Codable, Sendable, Equatable {
   public let evidence: [Evidence]
   public let coverage: [Coverage]
   public let diagnostics: [Diagnostic]
+  public let sequences: [ArchitectureSequence]?
   public let createdAt: String
   public init(
     schemaVersion: String = "1.0", id: String, workspaceID: String, generation: Int,
     contextDigest: String, inputs: [String: String], entities: [Entity], facts: [Fact],
     evidence: [Evidence], coverage: [Coverage], diagnostics: [Diagnostic] = [],
-    createdAt: String = ISO8601DateFormatter().string(from: Date())
+    sequences: [ArchitectureSequence]? = nil, createdAt: String = ISO8601DateFormatter().string(from: Date())
   ) {
     self.schemaVersion = schemaVersion
     self.id = id
@@ -31,6 +32,7 @@ public struct Snapshot: Codable, Sendable, Equatable {
     self.evidence = evidence
     self.coverage = coverage
     self.diagnostics = diagnostics
+    self.sequences = sequences
     self.createdAt = createdAt
   }
 }

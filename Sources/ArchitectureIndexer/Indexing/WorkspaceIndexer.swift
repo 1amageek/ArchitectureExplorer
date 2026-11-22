@@ -66,7 +66,7 @@ public actor WorkspaceIndexer {
     let contextDigest = CanonicalJSON.digest(
       try CanonicalJSON.encode(
         captured.inputs.filter {
-          $0.key.hasPrefix("@")
+          ($0.key.hasPrefix("@") && $0.key != "@sequences")
             || [
               "Package.swift", "Package.resolved", "Cargo.toml", "Cargo.lock", "architecture.json",
             ].contains(URL(fileURLWithPath: $0.key).lastPathComponent)
@@ -292,11 +292,15 @@ public actor WorkspaceIndexer {
       factMap[fact.id] = fact
     }
     var mapDiagnostics: [Diagnostic] = []
+    var sequences: [ArchitectureSequence]?
+    var sequenceDiagnostics: [Diagnostic] = []
+    var architecture: StructurizrContext?
     coverage.removeAll { [CatalogContext.producer, StructurizrContext.producer].contains($0.producer) }
     if captured.inputs["@mapCaptureFailure"] == nil, let dsl = captured.catalogs.first(where: { $0.path == WorkspacePaths.architectureModelFilename }) {
       do {
         let map = try StructurizrContext(workspaceID: paths.workspaceID, input: dsl, catalogs: captured.catalogs, contextDigest: contextDigest,
           indexed: nodeMap, inputs: captured.inputs, failedSources: Set(failures.keys))
+        architecture = map
         for node in map.nodes { nodeMap[node.id] = node }
         for fact in map.facts { factMap[fact.id] = fact }
         for item in map.evidence { evidenceMap[item.id] = item }
@@ -316,6 +320,16 @@ public actor WorkspaceIndexer {
       for fact in catalog.facts { factMap[fact.id] = fact }
       for item in catalog.evidence { evidenceMap[item.id] = item }
     }
+    if captured.inputs[WorkspacePaths.sequenceModelFilename] != nil {
+      do {
+        guard let file = captured.sequenceFiles[WorkspacePaths.sequenceModelFilename], let architecture else {
+          throw ArchitectureError("SEQUENCE_DSL_INVALID", "Sequence data requires a captured SEQUENCES.dsl and a valid ARCHITECTURE.dsl.")
+        }
+        sequences = try StructurizrSequence.parse(file, architecture: architecture, citedFiles: captured.sequenceFiles)
+      } catch let error as ArchitectureError {
+        sequenceDiagnostics.append(Diagnostic(error.code, error.message, scope: WorkspacePaths.sequenceModelFilename))
+      }
+    }
     let nodes = nodeMap.values.sorted { $0.id < $1.id }
     let facts = factMap.values.filter { nodeMap[$0.source] != nil && nodeMap[$0.target] != nil }
       .sorted { $0.id < $1.id }
@@ -332,7 +346,8 @@ public actor WorkspaceIndexer {
       contextDigest: contextDigest, inputs: captured.inputs, entities: nodes, facts: facts,
       evidence: evidenceMap.values.sorted { $0.id < $1.id },
       coverage: coverage.sorted { ($0.scope, $0.producer) < ($1.scope, $1.producer) },
-      diagnostics: mapDiagnostics + captured.diagnostics + failures.values.sorted { $0.scope < $1.scope })
+      diagnostics: mapDiagnostics + sequenceDiagnostics + captured.diagnostics + failures.values.sorted { $0.scope < $1.scope },
+      sequences: sequences)
     try await store.publish(snapshot)
     current = snapshot
     diskChecked = true
@@ -385,7 +400,7 @@ public actor WorkspaceIndexer {
       evidence: snapshot.evidence.filter { !result.evidence.map(\.id).contains($0.id) }
         + result.evidence,
       coverage: snapshot.coverage.filter { !($0.producer == "cfg.tree-sitter" && $0.scope == id) }
-        + [result.coverage], diagnostics: snapshot.diagnostics)
+        + [result.coverage], diagnostics: snapshot.diagnostics, sequences: snapshot.sequences)
     try await store.publish(published)
     current = published
     return published
@@ -433,7 +448,7 @@ public actor WorkspaceIndexer {
           && !(producer == "project.metadata" && item.producer == SwiftPMManifest.producer && evaluated.contains(item.scope))
       } + [
         result.coverage
-      ], diagnostics: checked.diagnostics)
+      ], diagnostics: checked.diagnostics, sequences: checked.sequences)
     try await store.publish(next)
     current = next
     return next
@@ -441,11 +456,11 @@ public actor WorkspaceIndexer {
 
   public func publishedSnapshot() -> Snapshot? { current }
   private func capture(configuration: IndexConfiguration, generation: Int) async throws -> (
-    sources: [SourceInput], catalogs: [SourceInput], inputs: [String: String], diagnostics: [Diagnostic]
+    sources: [SourceInput], catalogs: [SourceInput], sequenceFiles: [String: SourceInput], inputs: [String: String], diagnostics: [Diagnostic]
   ) {
     let paths = paths
     return try await withThrowingTaskGroup(
-      of: (sources: [SourceInput], catalogs: [SourceInput], inputs: [String: String], diagnostics: [Diagnostic]).self
+      of: (sources: [SourceInput], catalogs: [SourceInput], sequenceFiles: [String: SourceInput], inputs: [String: String], diagnostics: [Diagnostic]).self
     ) { group in
       group.addTask(priority: .utility) {
         try WorkspaceScanner().capture(

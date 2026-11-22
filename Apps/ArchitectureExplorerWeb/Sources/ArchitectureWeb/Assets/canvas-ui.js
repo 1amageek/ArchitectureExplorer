@@ -47,7 +47,7 @@ window.ArchitectureCanvasUI=class {
   reportEntry(session){
     const report=session.document.metadata?.verificationReport||session.document.metadata?.specVerification,b=report?.mapBinding;
     if(!(Array.isArray(report?.requirements)||Array.isArray(report?.checks))||!b||![b.workspaceID,b.snapshotID,b.entityID].every(id=>typeof id==='string'&&id.length))return null;
-    return {id:session.viewSessionID,title:session.document.title,digest:session.document.sourceDigest,binding:b,summary:window.ArchitectureCanvasModel.specificationReport(session.document).summary};
+    return {id:session.viewSessionID,title:session.document.title,digest:session.document.sourceDigest,binding:b,requirements:(report.requirements||[]).map(item=>item.id),summary:window.ArchitectureCanvasModel.specificationReport(session.document).summary};
   }
   matchesMap(entry,target){
     return entry&&entry.binding.workspaceID===target.workspaceID&&entry.binding.snapshotID===target.snapshotID&&entry.binding.entityID===target.entityID;
@@ -74,6 +74,32 @@ window.ArchitectureCanvasUI=class {
       }
     }
     return matches.sort((a,b)=>a.title.localeCompare(b.title)||a.digest.localeCompare(b.digest));
+  }
+  async openWorkspaceSequence(summary,snapshotID){
+    const retry=()=>this.openWorkspaceSequence(summary,snapshotID).catch(this.context.problem);
+    const load=this.begin({title:summary.title,detail:'Loading sequence…'},true,retry);
+    try{
+      await load.paint;if(!load.current())return;
+      const document=await this.context.rpc('workspace.sequence',{snapshotID,key:summary.key});
+      if(!load.current())return;
+      const sequence=document.metadata?.workspaceSequence;
+      if(document.kind!=='sequence'||sequence?.snapshotID!==snapshotID||sequence?.key!==summary.key)
+        throw Error('The returned sequence does not match the selected snapshot.');
+      const key=JSON.stringify(['sequence',snapshotID,summary.key]);
+      const retained=this.contributionSessions.get(key);
+      if(retained&&(this.sessions||[]).some(session=>session.viewSessionID===retained)){
+        const existing=await this.context.rpc('canvas.get',{viewSessionID:retained});
+        if(!load.current())return;
+        if(existing.document.metadata?.workspaceSequence?.snapshotID===snapshotID&&
+           existing.document.metadata?.workspaceSequence?.key===summary.key&&existing.document.kind==='sequence'){
+          this.present(existing,true);return;
+        }
+      }
+      const session=await this.mutate('canvas.open',{name:summary.key+'.json',text:JSON.stringify(document)});
+      if(!load.current())return;
+      this.contributionSessions.set(key,session.viewSessionID);
+      this.present(session,true);this.list().catch(this.context.problem);
+    }catch(error){this.failed(load,error,retry);}
   }
   async openMapReport(entry,target,active){
     if(!active())return;

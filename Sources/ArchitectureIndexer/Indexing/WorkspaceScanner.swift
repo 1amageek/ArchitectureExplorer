@@ -14,7 +14,7 @@ public struct WorkspaceScanner: Sendable {
     }
   }
   public func capture(paths: WorkspacePaths, configuration: IndexConfiguration, generation: Int)
-    throws -> (sources: [SourceInput], catalogs: [SourceInput], inputs: [String: String], diagnostics: [Diagnostic])
+    throws -> (sources: [SourceInput], catalogs: [SourceInput], sequenceFiles: [String: SourceInput], inputs: [String: String], diagnostics: [Diagnostic])
   {
     // Cooperating generators replace fragments and the root under an exclusive directory lock.
     let directory = open(paths.root.path, O_RDONLY | O_DIRECTORY | O_CLOEXEC)
@@ -25,6 +25,7 @@ public struct WorkspaceScanner: Sendable {
     }
     var sources: [SourceInput] = []
     var catalogs: [SourceInput] = []
+    var sequenceFiles: [String: SourceInput] = [:]
     var inputs: [String: String] = [:]
     var diagnostics: [Diagnostic] = []
     let rootPrefix = paths.root.path + "/"
@@ -66,7 +67,8 @@ public struct WorkspaceScanner: Sendable {
         continue
       }
       guard values.isRegularFile == true else { continue }
-      if url.pathExtension == "dsl", relative != WorkspacePaths.architectureModelFilename {
+      let sequence = relative == WorkspacePaths.sequenceModelFilename && configuration.accepts(relative)
+      if url.pathExtension == "dsl", relative != WorkspacePaths.architectureModelFilename, !sequence {
         if configuration.accepts(relative) { localDSL.insert(relative) }
         continue
       }
@@ -79,13 +81,14 @@ public struct WorkspaceScanner: Sendable {
       let design = SnapshotDesignDocument.matches(relative) && configuration.accepts(relative)
       let verificationSpec = relative.hasPrefix("Verification/")
         && ["properties.json", "invar.json"].contains(url.lastPathComponent) && configuration.accepts(relative)
-      guard verificationSpec || design || catalog || contextFile || (sourceLanguage != nil && configuration.accepts(relative)) else {
+      guard sequence || verificationSpec || design || catalog || contextFile || (sourceLanguage != nil && configuration.accepts(relative)) else {
         continue
       }
       if let language = sourceLanguage, !configuration.languages.contains(language), !contextFile {
         continue
       }
-      guard (values.fileSize ?? Int.max) <= configuration.maxBytes else {
+      let byteLimit = sequence ? min(configuration.maxBytes, StructurizrSequence.fileLimit) : configuration.maxBytes
+      guard (values.fileSize ?? Int.max) <= byteLimit else {
         diagnostics.append(
           Diagnostic(
             "RESOURCE_LIMIT", "File exceeds configured source byte budget.", scope: relative))
@@ -94,7 +97,7 @@ public struct WorkspaceScanner: Sendable {
       }
       let safeURL = URL(fileURLWithPath: canonicalPath)
       let data = try Data(contentsOf: safeURL)
-      guard data.count <= configuration.maxBytes else {
+      guard data.count <= byteLimit else {
         diagnostics.append(
           Diagnostic("RESOURCE_LIMIT", "File grew beyond configured byte budget.", scope: relative))
         inputs[relative] = "oversize"
@@ -106,6 +109,10 @@ public struct WorkspaceScanner: Sendable {
           "RESOURCE_LIMIT", "Immutable source capture exceeds 256 MiB.", exitCode: 6)
       }
       inputs[relative] = CanonicalJSON.digest(data)
+      if sequence {
+        sequenceFiles[relative] = SourceInput(workspaceID: paths.workspaceID, path: relative, language: "structurizr",
+          bytes: data, contextDigest: configuration.digest, generation: generation)
+      }
       if catalog {
         catalogs.append(SourceInput(workspaceID: paths.workspaceID, path: relative, language: "catalog", bytes: data, contextDigest: configuration.digest, generation: generation))
       }
@@ -152,6 +159,41 @@ public struct WorkspaceScanner: Sendable {
         inputs["@mapCaptureFailure"] = CanonicalJSON.digest(message)
       }
     }
+    if let sequence = sequenceFiles[WorkspacePaths.sequenceModelFilename],
+      let source = String(data: sequence.bytes, encoding: .utf8) {
+      var remaining = min(StructurizrSequence.citationBudget, 256 * 1024 * 1024 - capturedBytes)
+      let references = Set(StructurizrSequence.lines(source).compactMap {
+        StructurizrSequence.Reference($0.trimmingCharacters(in: .whitespacesAndNewlines))?.path
+      }).sorted()
+      for path in references.prefix(StructurizrSequence.citationLimit) where path != sequence.path {
+        try Task.checkCancellation()
+        guard configuration.accepts(path), remaining > 0 else { continue }
+        do {
+          let url = try paths.resolve(path)
+          guard url.path == rootPrefix + path else { continue }
+          let properties = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+          let limit = min(remaining, configuration.maxBytes)
+          guard properties.isRegularFile == true, (properties.fileSize ?? Int.max) <= limit else { continue }
+          let handle = try FileHandle(forReadingFrom: url)
+          defer { handle.closeFile() }
+          let data = try handle.read(upToCount: limit + 1) ?? Data()
+          guard data.count <= limit else { continue }
+          let input = SourceInput(workspaceID: paths.workspaceID, path: path, language: "none", bytes: data,
+            contextDigest: configuration.digest, generation: generation)
+          if let digest = inputs[path], digest != input.digest {
+            throw ArchitectureError("INPUT_CHANGED_DURING_ANALYSIS", "Sequence evidence changed during capture: " + path)
+          }
+          inputs[path] = input.digest
+          sequenceFiles[path] = input
+          remaining -= data.count
+        } catch let failure as ArchitectureError where failure.code == "INPUT_CHANGED_DURING_ANALYSIS" {
+          throw failure
+        } catch {
+          diagnostics.append(Diagnostic("SEQUENCE_EVIDENCE_UNAVAILABLE", "Could not capture sequence evidence.", scope: path))
+        }
+      }
+    }
+    if inputs[WorkspacePaths.sequenceModelFilename] != nil { inputs["@sequences"] = "structurizr-dynamic-v1" }
     inputs["@configuration"] = configuration.digest
     inputs["@provider"] = "skeleton-1215a3b+tree-sitter-0.25.0+syntax-v9"
     inputs["@designDocuments"] = "markdown-v1"
@@ -160,6 +202,6 @@ public struct WorkspaceScanner: Sendable {
     inputs["@swiftpm"] = "literal-manifest-v1"
     inputs["@cfg"] = ControlFlowProvider.version
     inputs["@toolchain"] = "swift-6.4.1"
-    return (sources.sorted { $0.path < $1.path }, catalogs.sorted { $0.path < $1.path }, inputs, diagnostics)
+    return (sources.sorted { $0.path < $1.path }, catalogs.sorted { $0.path < $1.path }, sequenceFiles, inputs, diagnostics)
   }
 }

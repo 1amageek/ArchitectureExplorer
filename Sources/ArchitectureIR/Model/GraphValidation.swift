@@ -11,6 +11,7 @@ public enum GraphValidation {
       Set(snapshot.evidence.map(\.id)).count == snapshot.evidence.count
     else { throw ArchitectureError("INVALID_GRAPH", "Duplicate identities.", exitCode: 7) }
     let ids = Set(snapshot.entities.map(\.id))
+    try validateSequences(snapshot, entityIDs: ids)
     let evidence = Set(snapshot.evidence.map(\.id))
     var parents: [String: [String]] = [:]
     for edge in snapshot.facts {
@@ -45,4 +46,28 @@ public enum GraphValidation {
       try visit(entity.id)
     }
   }
+
+  private static func validateSequences(_ snapshot: Snapshot, entityIDs: Set<String>) throws {
+    guard let sequences = snapshot.sequences else { return }
+    let error = ArchitectureError("INVALID_GRAPH", "Invalid sequence identities, scope or evidence.", exitCode: 7)
+    let path = WorkspacePaths.sequenceModelFilename
+    guard snapshot.inputs[path] != nil, sequences.count <= 64,
+      Set(sequences.map(\.key)).count == sequences.count,
+      sequences.reduce(0, { $0 + $1.messages.count }) <= 512 else { throw error }
+    for sequence in sequences {
+      let participants = Set(sequence.participants.map(\.id))
+      guard !sequence.key.isEmpty, participants.count == sequence.participants.count,
+        participants.isSubset(of: entityIDs), sequence.subjectID.map(entityIDs.contains) ?? true,
+        (1...100).contains(sequence.messages.count), sequence.declaration.path == path else { throw error }
+      for message in sequence.messages {
+        guard participants.contains(message.source), participants.contains(message.target),
+          message.source != message.target, message.declaration.path == path,
+          message.citations.count <= 8 else { throw error }
+        for citation in message.citations where citation.status == .recorded {
+          guard snapshot.inputs[citation.path] == citation.digest, citation.excerpt != nil else { throw error }
+        }
+      }
+    }
+  }
+
 }
