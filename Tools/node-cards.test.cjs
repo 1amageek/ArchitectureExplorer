@@ -498,7 +498,9 @@ test('traversal restores captured viewport, selection and List mode in both dire
   page.run("window.graph.zoom(.9);window.graph.pan({x:321,y:78});");page.elements.get('list-toggle').onclick();
   page.history.back();await settle();finish();
   assert.equal(page.cy.zoom(),1.4);assert.deepEqual({...page.cy.pan()},{x:123,y:87});assert.equal(page.cy.$(':selected').id(),'one');assert.equal(page.elements.get('node-list').hidden,false);
+  assert.equal(page.elements.get('graph').inert,true);assert.equal(page.elements.get('c4-surface').inert,true);
   page.history.forward();await settle();finish();assert.equal(page.cy.zoom(),.9);assert.deepEqual({...page.cy.pan()},{x:321,y:78});assert.equal(page.elements.get('node-list').hidden,true);
+  assert.equal(page.elements.get('graph').inert,false);assert.equal(page.elements.get('c4-surface').inert,false);
 });
 test('reload restores the route and initial token removal never stores the token in entries',async t=>{
   const state={architectureExplorer:1,index:2,query:{method:'graph.search',text:'Core',limit:50},level:'component',list:true};

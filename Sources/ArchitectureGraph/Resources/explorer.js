@@ -1054,6 +1054,8 @@
   }
   function setListView(visible){
     $('node-list').hidden=!visible;
+    $('graph').inert=visible;
+    $('c4-surface').inert=visible;
     const toggle=$('list-toggle');
     toggle.setAttribute('aria-pressed',String(visible));
     toggle.textContent=visible?($('c4-surface').hidden?'Graph view':'Map'):'List view';
