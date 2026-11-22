@@ -311,6 +311,45 @@
     const text=rows.map(row=>`<text x="${row.x}" y="${row.y}" font-size="${row.font}" font-weight="${row.weight}" fill="${colors[row.ink]}">${escape(row.text)}</text>`).join('');
     return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" font-family="${proofFont}"><title>${escape(node.name)}</title><circle cx="19" cy="20" r="3" fill="${colors.accent}"/>${text}</svg>`);
   }
+  const sequenceLane = {width:264, height:64, gutter:20, fontSize:21, lineHeight:23, maxLines:4,
+    fontFamily:'Helvetica Neue, Arial, sans-serif'};
+  const graphemes = new Intl.Segmenter(undefined,{granularity:'grapheme'});
+
+  function sequenceTitle(label,context){
+    const value=String(label).trim().replace(/\s+/gu,' ').toWellFormed();
+    const {width,gutter,fontSize,fontFamily,maxLines}=sequenceLane;
+    const budget=width-gutter*2;
+    if(context)context.font=`600 ${fontSize}px ${fontFamily}`;
+    const fits=value=>(context?context.measureText(value).width:Array.from(value).length*fontSize)<=budget;
+    const tokens=Array.from(graphemes.segment(value.slice(0,1024).toWellFormed()),item=>item.segment);
+    const lines=[];
+    let start=0;
+    while(start<tokens.length&&lines.length<maxLines){
+      let end=start, boundary=-1, line='';
+      while(end<tokens.length&&fits(line+tokens[end])){
+        if(tokens[end]===' ')boundary=end;
+        line+=tokens[end++];
+      }
+      const last=lines.length===maxLines-1;
+      if(end===tokens.length&&value.length<=1024){
+        lines.push(line);break;
+      }
+      if(last){
+        while(end>start&&!fits(tokens.slice(start,end).join('').trimEnd()+'…'))end--;
+        lines.push(tokens.slice(start,end).join('').trimEnd()+'…');break;
+      }
+      if(boundary>start)end=boundary;
+      end=Math.max(start+1,end);
+      lines.push(tokens.slice(start,end).join('').trimEnd());
+      start=end+(tokens[end]===' '?1:0);
+    }
+    return lines;
+  }
+
+  function laneHeaderHeight(lines){
+    return Math.max(sequenceLane.height,lines.length*sequenceLane.lineHeight+16);
+  }
+
   function size(node){
     if(node.proofCard)return {width:node.proofCard.width,height:node.proofCard.height};
     if(node.canvas?.svg){const match=node.canvas.svg.match(/viewBox\s*=\s*["']\s*[\d.-]+[ ,]+[\d.-]+[ ,]+([\d.]+)[ ,]+([\d.]+)/);const ratio=match?Number(match[2])/Number(match[1]):.65;return {width:960,height:Math.max(64,Math.min(10000,960*ratio))};}
@@ -320,7 +359,7 @@
     if(node.canvas?.role==='note')return {width:240,height:88};
     if(node.kind==='canvasEvent')return {width:22,height:22};
     if(['initial','final','pseudostate'].includes(node.canvas?.role))return {width:28,height:28};
-    if(node.kind==='canvasLane')return {width:264,height:88};
+    if(node.kind==='canvasLane')return {width:sequenceLane.width,height:node.canvas.headerHeight??sequenceLane.height};
     if(node.canvas?.role==='condition')return {width:160,height:88};
     return {width:264,height:88};
   }
@@ -373,27 +412,63 @@
     const metadata=document.kind==='sequence'?document.metadata?.workspaceSequence:null;
     const sequence=typeof metadata?.snapshotID==='string'&&typeof metadata.workspaceID==='string'&&
       Array.isArray(metadata.participants)&&Array.isArray(metadata.requirements)?metadata:null;
-    if(document.kind==='sequence')for(const lane of document.lanes){const id='__lane:'+lane.id;{nodes.push({id,name:lane.label,kind:'canvasLane',language:'none',attributes:{},canvas:{role:'lane',diagram:'sequence',participant:sequence?.participants.find(participant=>participant?.id===lane.id)}});for(const node of nodes.filter(n=>n.canvas.laneID===lane.id))edges.push({id:'__lane-contains:'+node.id,source:id,target:node.id,kind:'contains',canvas:{label:'Lane',role:'contains',directed:true}});}}
+    if(document.kind==='sequence'){
+      const context=scope.document?.createElement('canvas').getContext('2d');
+      const titles=document.lanes.map(lane=>sequenceTitle(lane.label,context));
+      const headerHeight=Math.max(sequenceLane.height,...titles.map(laneHeaderHeight));
+      document.lanes.forEach((lane,index)=>{
+        const id='__lane:'+lane.id;
+        const participant=sequence?.participants.find(participant=>participant?.id===lane.id);
+        const members=nodes.filter(node=>node.canvas.laneID===lane.id);
+        nodes.push({id,name:lane.label,kind:'canvasLane',language:'none',attributes:{},
+          canvas:{role:'lane',diagram:'sequence',participant,headerHeight,titleLines:titles[index]}});
+        for(const node of members)edges.push({id:'__lane-contains:'+node.id,source:id,target:node.id,kind:'contains',
+          canvas:{label:'Lane',role:'contains',directed:true}});
+      });
+    }
     if(document.kind==='sequence')for(const [index,fragment]of (document.metadata?.fragments||[]).entries())nodes.push({id:'__fragment:'+index,name:[fragment.kind,fragment.label].filter(Boolean).join(' · '),kind:'canvasFragment',language:'none',attributes:{},canvas:{role:'fragment',details:fragment,diagram:'sequence'}});
     if(document.svg)nodes.push({id:'__svg',name:document.title,kind:'canvas',language:'none',attributes:{},canvas:{role:'image',svg:document.svg,diagram:document.kind}});
     const origin=ir||document.metadata?.origin||{};
     return {workspaceID:sequence?.workspaceID||'canvas:'+session.viewSessionID,snapshotID:sequence?.snapshotID||document.sourceDigest,queryID:session.viewSessionID,nodes,edges,evidence:origin.evidence||[],coverage:origin.coverage||[],freshness:sequence?'declared':origin.freshness||document.metadata?.applicability||'imported',completeness:origin.completeness||(origin.truncated?'partial':'completeWithinScope'),truncated:!!origin.truncated,canvas:{sequence,specReport:report?.summary||null,verification:verificationSummary(document),sourceIR:!!ir,kind:document.kind,layout:state.layout||'auto',metadata:document.metadata||{},title:document.title,format:document.format,totalNodes:document.nodes.length,totalEdges:document.edges.length},diagnostics:[]};
   }
   function sequenceLayout(request){
-    const lanes=request.nodes.filter(n=>n.kind==='canvasLane'),events=request.nodes.filter(n=>n.kind==='canvasEvent'),orders=[...new Set(events.map(n=>n.canvas.order))].sort((a,b)=>a-b),nodes=[],routes=[],rows=new Map();let y=120;
+    const lanes=request.nodes.filter(n=>n.kind==='canvasLane'),events=request.nodes.filter(n=>n.kind==='canvasEvent'),orders=[...new Set(events.map(n=>n.canvas.order))].sort((a,b)=>a-b),nodes=[],routes=[],rows=new Map();
+    const top=28, stride=320, width=sequenceLane.width;
+    const headerHeight=Math.max(sequenceLane.height,...lanes.map(lane=>size(lane).height));
+    const firstRow=top+headerHeight+26;
+    let y=firstRow;
     for(const order of orders){let slots=1;for(const lane of lanes)slots=Math.max(slots,events.filter(n=>'__lane:'+n.canvas.laneID===lane.id&&n.canvas.order===order).length);const rowEvents=events.filter(n=>n.canvas.order===order),note=rowEvents.some(n=>n.canvas.role==='note');const height=Math.max(72,slots*32+40,note?128:0);rows.set(order,{y,height});y+=height;}
     const height=Math.max(184,y-28);
-    lanes.forEach((lane,i)=>{const members=events.filter(n=>'__lane:'+n.canvas.laneID===lane.id);nodes.push({id:lane.id,x:28+i*320,y:28,width:264,height:members.length?height:88,group:!!members.length});for(const order of orders){const matching=members.filter(n=>n.canvas.order===order);matching.forEach((event,slot)=>{const bounds=size(event);nodes.push({id:event.id,x:28+i*320+(264-bounds.width)/2,y:rows.get(order).y+slot*32,...bounds,group:false});});}});
+    lanes.forEach((lane,index)=>{
+      const x=top+index*stride;
+      const members=events.filter(node=>'__lane:'+node.canvas.laneID===lane.id);
+      nodes.push({id:lane.id,x,y:top,width,height:members.length?height:headerHeight,group:!!members.length});
+      for(const order of orders)members.filter(node=>node.canvas.order===order).forEach((event,slot)=>{
+        const bounds=size(event);
+        nodes.push({id:event.id,x:x+(width-bounds.width)/2,y:rows.get(order).y+slot*32,...bounds,group:false});
+      });
+    });
     const byID=new Map(nodes.map(n=>[n.id,n]));
     for(const edge of request.edges){const a=byID.get(edge.source),b=byID.get(edge.target);if(a&&!a.group&&b&&!b.group&&a.x===b.x&&a.id!==b.id){routes.push({id:edge.id,points:[{x:a.x+22,y:a.y+11},{x:a.x+100,y:a.y+11},{x:b.x+100,y:b.y+11},{x:b.x+22,y:b.y+11}]});}}
-    for(const fragment of request.nodes.filter(n=>n.kind==='canvasFragment')){const data=fragment.canvas.details,start=orders.find(order=>order>=data.start),end=orders.filter(order=>order<data.end).at(-1);const top=start===undefined?120:rows.get(start).y-16,bottom=end===undefined?top+40:rows.get(end).y+rows.get(end).height-20;nodes.push({id:fragment.id,x:16,y:top,width:Math.max(264,lanes.length*320-32),height:Math.max(40,bottom-top),group:false});}
+    for(const fragment of request.nodes.filter(n=>n.kind==='canvasFragment')){const data=fragment.canvas.details,start=orders.find(order=>order>=data.start),end=orders.filter(order=>order<data.end).at(-1);const top=start===undefined?firstRow:rows.get(start).y-16,bottom=end===undefined?top+40:rows.get(end).y+rows.get(end).height-20;nodes.push({id:fragment.id,x:16,y:top,width:Math.max(264,lanes.length*320-32),height:Math.max(40,bottom-top),group:false});}
     return {generation:request.generation,queryID:request.queryID,snapshotID:request.snapshotID,nodes,routes};
   }
   function card(node,width,height,group,palette,fit,marks){
     if(node.proofCard&&!group)return proofCard(node,palette);
     if(node.canvas.svg)return 'data:image/svg+xml;utf8,'+encodeURIComponent(node.canvas.svg);
     const titleSize=21;
-    if(node.kind==='canvasLane')return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect x="1" y="1" width="${width-2}" height="62" rx="5" fill="${palette.header}" stroke="${palette.divider}"/><text x="${width/2}" y="36" text-anchor="middle" font-size="${titleSize}" font-weight="600" font-family="-apple-system, sans-serif" fill="${palette.text}">${escape(fit(node.name,width-24,titleSize,600))}</text><path d="M${width/2} 64V${height}" stroke="${palette.secondary}" stroke-dasharray="5 5"/></svg>`);
+    if(node.kind==='canvasLane'){
+      const {fontSize,fontFamily,lineHeight}=sequenceLane;
+      const lines=node.canvas.titleLines??sequenceTitle(node.name);
+      const headerHeight=node.canvas.headerHeight??laneHeaderHeight(lines);
+      const middle=width/2;
+      const labels=lines.map((line,index)=>{
+        const y=headerHeight/2+(index-(lines.length-1)/2)*lineHeight;
+        return `<text x="${middle}" y="${y}" text-anchor="middle" dominant-baseline="central">${escape(line)}</text>`;
+      }).join('');
+      const lifeline=height>headerHeight?`<path d="M${middle} ${headerHeight}V${height}" stroke="${palette.secondary}" stroke-dasharray="5 5"/>`:'';
+      return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>${escape(node.name)}</title><rect x="1" y="1" width="${width-2}" height="${headerHeight-2}" rx="5" fill="${palette.header}" stroke="${palette.divider}"/><g font-size="${fontSize}" font-weight="600" font-family="${fontFamily}" fill="${palette.text}">${labels}</g>${lifeline}</svg>`);
+    }
     const {role}=node.canvas;
     if(node.kind==='canvasEvent'&&role!=='note'||['initial','final','pseudostate'].includes(role))return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><circle cx="${width/2}" cy="${height/2}" r="${Math.min(width,height)/2-3}" fill="${role==='final'?'none':palette.text}" stroke="${palette.text}"/>${role==='final'?`<circle cx="${width/2}" cy="${height/2}" r="${Math.min(width,height)/2-7}" fill="${palette.text}"/>`:''}</svg>`);
     const lines=conditionLines(node);

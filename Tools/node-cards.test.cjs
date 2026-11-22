@@ -854,14 +854,61 @@ test('real Swift/Rust source graphs render structured free functions, receivers 
   }
 });
 
-test('sequence rendering keeps fragment bounds, readable messages and full-height lifelines',async t=>{
-  const model=require(path.join(assets,'canvas-model.js')),document={kind:'sequence',title:'Messages',format:'json',sourceDigest:'d',lanes:[{id:'a',label:'Client'},{id:'b',label:'Server'}],nodes:[{id:'send',label:'begin',role:'send',laneID:'a',order:0},{id:'receive',label:'begin',role:'receive',laneID:'b',order:0}],edges:[{id:'message',source:'send',target:'receive',label:'begin',role:'message',directed:true}],metadata:{fragments:[{kind:'loop',label:'until complete',start:0,end:1}]}};
-  const view=model.view({viewSessionID:'s',document,state:{}}),page=await render(view.nodes,view.edges,true,{diagram:view.canvas});t.after(()=>page.cy.destroy());
-  const request={nodes:view.nodes,edges:view.edges,canvas:view.canvas};const result=await page.run('ArchitectureLayout.layout('+JSON.stringify(request)+',new ELK())');
+test('sequence headers center complete names and preserve directional messages at rest and on selection',async t=>{
+  const model=require(path.join(assets,'canvas-model.js'));
+  const participant='macOS Task Workspace and Sync';
+  const document={kind:'sequence',title:'Messages',format:'json',sourceDigest:'d',
+    lanes:[{id:'a',label:participant},{id:'b',label:'Server'}],
+    nodes:[
+      {id:'send',label:'begin',role:'send',laneID:'a',order:0},
+      {id:'receive',label:'begin',role:'receive',laneID:'b',order:0},
+      {id:'return',label:'reply',role:'send',laneID:'b',order:1},
+      {id:'accept',label:'reply',role:'receive',laneID:'a',order:1},
+      {id:'noteLeft',label:'shared',role:'send',laneID:'a',order:2},
+      {id:'noteRight',label:'shared',role:'receive',laneID:'b',order:2},
+    ],
+    edges:[
+      {id:'message',source:'send',target:'receive',label:'begin',role:'message',directed:true},
+      {id:'reply',source:'return',target:'accept',label:'reply',role:'reply',directed:true},
+      {id:'undirected',source:'noteLeft',target:'noteRight',label:'shared',role:'message',directed:false},
+    ],
+    metadata:{fragments:[{kind:'loop',label:'until complete',start:0,end:1}]}};
+  const view=model.view({viewSessionID:'s',document,state:{}}),page=await render(view.nodes,view.edges,true,{diagram:view.canvas});
+  t.after(()=>page.cy.destroy());
+  const request={nodes:view.nodes,edges:view.edges,canvas:view.canvas};
+  const result=await page.run('ArchitectureLayout.layout('+JSON.stringify(request)+',new ELK())');
   const fragment=page.cy.getElementById('__fragment:0'),expected=result.nodes.find(n=>n.id===fragment.id());
-  assert.ok(Math.abs(fragment.position().x-(expected.x+expected.width/2))<.01);assert.ok(Math.abs(fragment.position().y-(expected.y+expected.height/2))<.01);
-  for(const id of ['__lane:a','__lane:b']){const lane=page.cy.getElementById(id);assert.match(page.svg(id),/stroke-dasharray="5 5"/);assert.match(page.svg(id),new RegExp('height="'+(lane.height()+2*Number(lane.numericStyle('padding')))+'"'));}
-  page.theme.value='dark';page.media.change();const edge=page.cy.getElementById('message');assert.equal(Number(edge.style('opacity')),.9);const foreground=page.run("getComputedStyle(document.documentElement).getPropertyValue('--graph-node-text')");assert.equal(edge.style('color'),'rgb('+foreground.match(/[a-f\d]{2}/gi).map(value=>parseInt(value,16)).join(',')+')');
+  assert.ok(Math.abs(fragment.position().x-(expected.x+expected.width/2))<.01);
+  assert.ok(Math.abs(fragment.position().y-(expected.y+expected.height/2))<.01);
+
+  const layout=view.nodes.find(node=>node.id==='__lane:a').canvas;
+  for(const [id,label] of [['__lane:a',participant],['__lane:b','Server']]){
+    const lane=page.cy.getElementById(id),svg=page.svg(id);
+    const labels=[...svg.matchAll(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" dominant-baseline="central">([^<]+)<\/text>/g)];
+    assert.equal(labels.map(line=>line[3]).join(' '),label);
+    assert.ok(labels.every(line=>Number(line[1])===lane.outerWidth()/2));
+    assert.equal((Number(labels[0][2])+Number(labels.at(-1)[2]))/2,layout.headerHeight/2);
+    assert.match(svg,/stroke-dasharray="5 5"/);
+    assert.match(svg,new RegExp('height="'+(lane.height()+2*Number(lane.numericStyle('padding')))+'"'));
+  }
+  assert.ok(layout.titleLines.length>1);
+  const first=result.nodes.find(node=>node.id==='send');
+  const lane=result.nodes.find(node=>node.id==='__lane:a');
+  assert.ok(first.y>lane.y+layout.headerHeight);
+  page.theme.value='dark';page.media.change();
+  for(const [id,sign,pattern] of [['message',1,'solid'],['reply',-1,'dashed']]){
+    const edge=page.cy.getElementById(id);
+    assert.equal(Math.sign(edge.target().position().x-edge.source().position().x),sign);
+    assert.equal(edge.style('line-style'),pattern);
+    assert.equal(edge.style('target-arrow-shape'),'triangle');
+    assert.ok(Number(edge.style('arrow-scale'))>1);
+    assert.ok(Number(edge.numericStyle('target-distance-from-node'))>0);
+    assert.equal(Number(edge.style('opacity')),1);
+    const arrowScale=edge.style('arrow-scale');
+    edge.select();
+    assert.equal(edge.style('arrow-scale'),arrowScale);
+  }
+  assert.equal(page.cy.getElementById('undirected').style('target-arrow-shape'),'none');
 });
 test('real imported files render on the production Canvas with original semantic endpoints',{skip:!process.env.AE_CANVAS_DOCUMENTS},async t=>{
   const model=require(path.join(assets,'canvas-model.js')),documents=JSON.parse(fs.readFileSync(process.env.AE_CANVAS_DOCUMENTS,'utf8'));
